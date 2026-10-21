@@ -11,6 +11,11 @@ app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/app.js', (_req, res) => res.sendFile(path.join(__dirname, 'app.js')));
 app.get('/style.css', (_req, res) => res.sendFile(path.join(__dirname, 'style.css')));
 
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  next();
+});
+
 // Wraps async routes so errors return clean JSON instead of crashing
 const route = (fn) => async (req, res) => {
   try { res.json(await fn(req)); }
