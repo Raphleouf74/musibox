@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>MusicBox</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <header class="top">
+            <div class="logo">MusicBox <p style="font-size: 0.8em; margin: 0; color: black;">oifeel.</p></div>
+        </header>
+        <main class="grid">
+            <input
+                id="plName"
+                class="pl-name"
+                value="My playlist"
+                aria-label="Playlist name"
+                maxlength="40"
+            >
+            <div id="panels">
+                <section class="panel">
+                    <input
+                        id="q"
+                        class="search"
+                        type="search"
+                        placeholder="Search songs or artists"
+                        autocomplete="off"
+                    >
+                    <h2 id="findTitle">Trending now</h2>
+                    <ul id="results" class="tracks"></ul>
+                </section>
+                <section class="panel">
+                    <div class="head">
+                        <h2>
+                            Your playlist
+                            <span id="count" class="count">0</span>
+                        </h2>
+                        <button
+                            id="exportBtn"
+                            class="ghost"
+                            disabled
+                            title="Coming soon"
+                        >Export</button>
+                    </div>
+                    <ul id="playlist" class="tracks"></ul>
+                    <p id="empty" class="empty">Add a song from the left to start your playlist.</p>
+                    <div id="sugSlot" hidden>
+                        <div id="sugBox">
+                            <div class="head">
+                                <h2>Suggested for you</h2>
+                                <button id="newRecsBtn" class="ghost" type="button">New recommendations</button>
+                            </div>
+                            <ul id="suggestions" class="tracks"></ul>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+        <script src="app.js"></script>
+    </body>
+</html>
