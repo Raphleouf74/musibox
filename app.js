@@ -5,7 +5,7 @@ const audio = new Audio();
 let playingId = null;
 
 const $ = (id) => document.getElementById(id);
-const API_BASE = 'http://localhost:3000';
+const API_BASE = 'https://musibox.onrender.com';
 const api = async (path) => {
   const response = await fetch(`${API_BASE}${path}`);
   if (!response.ok) throw new Error(`Request failed: ${response.status}`);
