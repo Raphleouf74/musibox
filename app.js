@@ -26,6 +26,18 @@ const api = async (path) => {
   }
 };
 
+const apiPost = async (path, body) => {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: AbortSignal.timeout(45000)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(data.error || `Request failed (${response.status})`), { status: response.status, data });
+  return data;
+};
+
 let toastTimer;
 function toast(msg) {
   const el = $('toast');
@@ -311,8 +323,6 @@ const asCsv = () => {
   return '\ufeffTitle,Artist,Duration\n' +
     playlist.map((t) => [q(t.title), q(t.artist), mmss(t.duration)].join(',')).join('\n');
 };
-const shareUrl = () =>
-  `${location.origin}${location.pathname}#n=${encodeURIComponent(plTitle())}&t=${playlist.map((t) => t.id).join(',')}`;
 const copy = (text, ok) =>
   navigator.clipboard.writeText(text).then(() => toast(ok), () => toast('Couldn’t copy. Your browser blocked it.'));
 
@@ -321,7 +331,7 @@ $('exportBtn').addEventListener('click', (e) => { e.stopPropagation(); menu.hidd
 document.addEventListener('click', () => { menu.hidden = true; });
 menu.addEventListener('click', (e) => {
   const act = e.target.dataset.act;
-  if (act === 'share') copy(shareUrl(), 'Share link copied');
+  if (act === 'share') openShareModal();
   if (act === 'text') copy(asText(), 'Playlist copied as text');
   if (act === 'csv') {
     const blob = new Blob([asCsv()], { type: 'text/csv;charset=utf-8' });
@@ -334,20 +344,117 @@ menu.addEventListener('click', (e) => {
   }
 });
 
+// ---------- Modals ----------
+function showModal(el) {
+  el.hidden = false;
+  const f = el.querySelector('select, input:not([type=checkbox])');
+  if (f) setTimeout(() => f.focus(), 50);
+}
+const hideModal = (el) => { el.hidden = true; };
+document.querySelectorAll('.modal').forEach((m) =>
+  m.addEventListener('mousedown', (e) => { if (e.target === m) hideModal(m); }));
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') document.querySelectorAll('.modal').forEach((m) => hideModal(m));
+});
+
+// ---------- Share: create a short link ----------
+function openShareModal() {
+  $('shareStep1').hidden = false; $('shareStep2').hidden = true;
+  $('shareError').textContent = '';
+  $('sharePwOn').checked = false; $('sharePwRow').hidden = true; $('sharePw').value = '';
+  showModal($('shareModal'));
+}
+$('sharePwOn').addEventListener('change', (e) => {
+  $('sharePwRow').hidden = !e.target.checked;
+  if (e.target.checked) $('sharePw').focus();
+});
+$('shareCancel').addEventListener('click', () => hideModal($('shareModal')));
+$('shareDone').addEventListener('click', () => hideModal($('shareModal')));
+$('shareCopy').addEventListener('click', () => copy($('shareLink').value, 'Link copied'));
+
+$('shareForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('shareError'); err.textContent = '';
+  const usePw = $('sharePwOn').checked;
+  const pw = $('sharePw').value;
+  if (usePw && pw.length < 4) { err.textContent = 'The password needs at least 4 characters.'; return; }
+
+  const btn = $('shareSubmit');
+  btn.disabled = true; btn.textContent = 'Creating…';
+  try {
+    const body = { name: plTitle(), trackIds: playlist.map((t) => t.id), expiresIn: $('shareExpiry').value };
+    if (usePw) body.password = pw;
+    const res = await apiPost('/api/playlists', body);
+    $('shareLink').value = `${location.origin}/playlist/${res.id}`;
+    $('shareInfo').textContent =
+      (res.expiresAt ? `This link expires on ${new Date(res.expiresAt).toLocaleString()}.` : 'This link never expires.') +
+      (res.protected ? ' It is protected by your password.' : '');
+    $('shareStep1').hidden = true; $('shareStep2').hidden = false;
+    $('shareLink').select();
+  } catch (error) {
+    err.textContent = error.status ? error.message : 'Couldn’t reach the server. Please try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create link';
+  }
+});
+
+// ---------- Opening shared playlists ----------
+function applyShared(tracks, name) {
+  if (playlist.length && !confirm(`Open the shared playlist “${name}”? It will replace your current playlist.`)) return false;
+  playlist = tracks; playlistName = name;
+  $('plName').value = name; localStorage.setItem('musicbox:name', name);
+  shownSuggestionIds.clear(); save(); renderPlaylist(); renderResults(); loadSuggestions();
+  toast(`Opened “${name}”`);
+  return true;
+}
+
+// New short links: /playlist/XXXXXXX
+let pendingShareId = null;
+async function openSharedById(id, password = '') {
+  const err = $('unlockError'); err.textContent = '';
+  try {
+    const data = await apiPost(`/api/playlists/${id}/open`, password ? { password } : {});
+    hideModal($('unlockModal'));
+    history.replaceState(null, '', '/');
+    if (!data.tracks.length) return toast('Couldn’t load the songs. Please try again.');
+    applyShared(data.tracks, data.name);
+  } catch (e) {
+    if (e.status === 401) {
+      pendingShareId = id; $('unlockPw').value = '';
+      showModal($('unlockModal'));
+    } else if (e.status === 403 || e.status === 429) {
+      err.textContent = e.status === 403 ? 'Wrong password. Try again.' : e.message;
+      $('unlockPw').select();
+    } else {
+      hideModal($('unlockModal'));
+      history.replaceState(null, '', '/');
+      toast(e.status === 404 ? 'This playlist link has expired or doesn’t exist.' : 'Couldn’t open this playlist. Please try again.');
+    }
+  }
+}
+$('unlockForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (pendingShareId) openSharedById(pendingShareId, $('unlockPw').value);
+});
+$('unlockCancel').addEventListener('click', () => {
+  hideModal($('unlockModal'));
+  history.replaceState(null, '', '/');
+});
+function openSharedFromPath() {
+  const m = location.pathname.match(/^\/playlist\/([A-Za-z0-9]{4,16})\/?$/);
+  if (m) openSharedById(m[1]);
+}
+
+// Old long links (#n=...&t=...) keep working
 async function loadShared() {
   const params = new URLSearchParams(location.hash.slice(1));
   const ids = (params.get('t') || '').split(',').filter((x) => /^\d+$/.test(x));
   if (!ids.length) return;
   history.replaceState(null, '', location.pathname);
-  const name = params.get('n') || 'Shared playlist';
-  if (playlist.length && !confirm(`Open the shared playlist “${name}”? It will replace your current playlist.`)) return;
   try {
     const tracks = await api('/api/tracks?ids=' + ids.join(','));
     if (!tracks.length) throw new Error('empty');
-    playlist = tracks; playlistName = name;
-    $('plName').value = name; localStorage.setItem('musicbox:name', name);
-    shownSuggestionIds.clear(); save(); renderPlaylist(); renderResults(); loadSuggestions();
-    toast(`Opened “${name}”`);
+    applyShared(tracks, params.get('n') || 'Shared playlist');
   } catch {
     toast('Couldn’t open the shared playlist');
   }
@@ -369,4 +476,4 @@ $('closeAccount').addEventListener('click', () => $('accountdiv').classList.remo
 
 // ---------- Start ----------
 $('newRecsBtn').addEventListener('click', () => loadSuggestions({ refresh: true }));
-renderPlaylist(); showTrending(); loadSuggestions(); loadShared();
+renderPlaylist(); showTrending(); loadSuggestions(); loadShared(); openSharedFromPath();

@@ -13,11 +13,12 @@
                 if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
             } catch {}
         </script>
-        <link rel="stylesheet" href="style.css">
+        <link rel="stylesheet" href="/style.css">
     </head>
     <body>
         <header class="top">
-            <div class="logo">Musibox
+            <div class="logo">
+                Musibox
                 <p style="font-size: 0.8em; margin: 0; color: black;"></p>
             </div>
             <div id="buttons">
@@ -54,7 +55,7 @@
                         <div class="menu-wrap">
                             <button id="exportBtn" class="ghost" disabled>Export</button>
                             <div id="exportMenu" hidden>
-                                <button class="menu-item" data-act="share">Copy share link</button>
+                                <button class="menu-item" data-act="share">Share link…</button>
                                 <button class="menu-item" data-act="text">Copy as text</button>
                                 <button class="menu-item" data-act="csv">Download CSV</button>
                             </div>
@@ -79,7 +80,82 @@
             <p>Account management is not available yet.</p>
             <button id="closeAccount">Close</button>
         </div>
+        <div id="shareModal" class="modal" hidden>
+            <div
+                class="modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="shareTitle"
+            >
+                <h2 id="shareTitle">Share this playlist</h2>
+                <div id="shareStep1">
+                    <form id="shareForm">
+                        <label class="field">
+                            How long should the link work?
+                            <select id="shareExpiry">
+                                <option value="1h">1 hour</option>
+                                <option value="1d">1 day</option>
+                                <option value="7d" selected>7 days</option>
+                                <option value="30d">30 days</option>
+                                <option value="never">Forever</option>
+                            </select>
+                        </label>
+                        <label class="check">
+                            <input type="checkbox" id="sharePwOn"> Protect with a password
+                        </label>
+                        <div id="sharePwRow" hidden>
+                            <input
+                                id="sharePw"
+                                type="password"
+                                placeholder="Choose a password (4+ characters)"
+                                maxlength="64"
+                                autocomplete="new-password"
+                            >
+                        </div>
+                        <p id="shareError" class="form-error" role="alert"></p>
+                        <div class="modal-actions">
+                            <button type="button" id="shareCancel" class="ghost">Cancel</button>
+                            <button type="submit" id="shareSubmit" class="primary">Create link</button>
+                        </div>
+                    </form>
+                </div>
+                <div id="shareStep2" hidden>
+                    <div class="link-row">
+                        <input id="shareLink" readonly aria-label="Share link">
+                        <button id="shareCopy" class="primary" type="button">Copy</button>
+                    </div>
+                    <p id="shareInfo" class="muted"></p>
+                    <div class="modal-actions">
+                        <button id="shareDone" class="ghost" type="button">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="unlockModal" class="modal" hidden>
+            <div
+                class="modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="unlockTitle"
+            >
+                <h2 id="unlockTitle">This playlist is protected</h2>
+                <form id="unlockForm">
+                    <input
+                        id="unlockPw"
+                        type="password"
+                        placeholder="Enter the password"
+                        maxlength="64"
+                        autocomplete="off"
+                    >
+                    <p id="unlockError" class="form-error" role="alert"></p>
+                    <div class="modal-actions">
+                        <button type="button" id="unlockCancel" class="ghost">Cancel</button>
+                        <button type="submit" class="primary">Open</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         <div id="toast" role="status"></div>
-        <script src="app.js"></script>
+        <script src="/app.js"></script>
     </body>
 </html>
