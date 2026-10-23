@@ -25,7 +25,7 @@ body {
   height: 100vh;
   width: 100vw;
 }
-body.dark {
+.dark {
   --bg: #14142b;
   --surface: #1e1e2f;
   --ink: #fff;
@@ -34,29 +34,29 @@ body.dark {
   --accent-soft: #3b2ff0;
   --line: #3b2ff0;
 }
-body.dark {
+.dark body {
   background: var(--bg);
 }
-body.dark .panel {
+.dark .panel {
   background: var(--surface);
 }
-body.dark .track {
+.dark .track {
   background: var(--surface);
 }
-body.dark .track:hover {
+.dark .track:hover {
   background: var(--accent-soft);
 }
-body.dark .icon {
+.dark .icon {
   color: var(--surface);
 }
-body.dark input {
+.dark input {
   background: var(--surface);
   color: var(--ink);
 }
-body.dark #sugBox {
+.dark #sugBox {
   background: rgb(30, 30, 47, 0.4);
 }
-body.dark #sugBox.is-sticky {
+.dark #sugBox.is-sticky {
   background: rgb(25, 25, 75, 0.4);
 }
 h2 {
@@ -73,7 +73,7 @@ h2 {
   justify-content: space-between;
   gap: 16px;
   padding: 20px;
-  position: sticky;
+  position: fixed;
   top: 10px;
   width: 450px;
   left: 10px;
@@ -119,6 +119,7 @@ h2 {
   align-items: center;
   justify-content: center;
   gap: 24px;
+  margin-top: 75px;
 }
 #panels {
   display: grid;
@@ -420,5 +421,126 @@ button {
     opacity: 0.8;
     -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
+  }
+}
+
+/* ---------- v3: states, export menu, drag, toast, mobile ---------- */
+.track.skeleton {
+  grid-template-columns: 48px 1fr;
+  animation: pulse 1.2s ease-in-out infinite;
+}
+.sk-img,
+.sk-bars {
+  display: block;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  opacity: 0.5;
+}
+.sk-img {
+  width: 48px;
+  height: 48px;
+}
+.sk-bars {
+  height: 28px;
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+.state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+}
+#playlist .track {
+  cursor: grab;
+}
+.track.dragging {
+  opacity: 0.35;
+}
+.menu-wrap {
+  position: relative;
+}
+#exportMenu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  width: 200px;
+  padding: 6px;
+  z-index: 20;
+  background: var(--surface);
+  border-radius: 15px;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 20%);
+}
+.menu-item {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 10px 12px;
+  text-align: left;
+  background: transparent;
+  border-radius: 10px;
+}
+.menu-item:hover {
+  background: var(--accent-soft);
+}
+#toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  z-index: 1000;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--bg);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 20px);
+  transition:
+    opacity 0.3s,
+    transform 0.3s;
+}
+#toast.show {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+@media (max-width: 900px) {
+  .grid {
+    margin-top: 85px;
+  }
+  #panels {
+    width: 100%;
+    grid-template-columns: 1fr;
+    padding: 0 12px 48px;
+  }
+  .panel {
+    width: 100%;
+  }
+  .top {
+    width: calc(100% - 20px);
+    padding: 12px;
+  }
+  .top button {
+    height: 40px;
+    padding: 0 10px;
+    font-size: 13px;
+  }
+  .pl-name {
+    width: 80%;
+    max-width: 100%;
+  }
+  #accountdiv {
+    width: calc(100% - 20px);
+    top: 95px;
+  }
+  #sugBox,
+  #sugBox.is-sticky {
+    width: calc(100vw - 54px);
+    max-width: 510px;
   }
 }

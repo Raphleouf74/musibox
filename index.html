@@ -7,12 +7,23 @@
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+        <script>
+            try {
+                const t = localStorage.getItem('musicbox:theme');
+                if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
+            } catch {}
+        </script>
         <link rel="stylesheet" href="style.css">
     </head>
     <body>
         <header class="top">
-            <div class="logo">Musibox <p style="font-size: 0.8em; margin: 0; color: black;"></p></div>
-            <div id="buttons"><button id="theme">Night/Day mode</button><button id="account">Account</button></div>
+            <div class="logo">Musibox
+                <p style="font-size: 0.8em; margin: 0; color: black;"></p>
+            </div>
+            <div id="buttons">
+                <button id="theme">Night/Day mode</button>
+                <button id="account">Account</button>
+            </div>
         </header>
         <main class="grid">
             <input
@@ -40,12 +51,14 @@
                             Your playlist
                             <span id="count" class="count">0</span>
                         </h2>
-                        <button
-                            id="exportBtn"
-                            class="ghost"
-                            disabled
-                            title="Coming soon"
-                        >Export</button>
+                        <div class="menu-wrap">
+                            <button id="exportBtn" class="ghost" disabled>Export</button>
+                            <div id="exportMenu" hidden>
+                                <button class="menu-item" data-act="share">Copy share link</button>
+                                <button class="menu-item" data-act="text">Copy as text</button>
+                                <button class="menu-item" data-act="csv">Download CSV</button>
+                            </div>
+                        </div>
                     </div>
                     <ul id="playlist" class="tracks"></ul>
                     <p id="empty" class="empty">Add a song from the left to start your playlist.</p>
@@ -66,9 +79,7 @@
             <p>Account management is not available yet.</p>
             <button id="closeAccount">Close</button>
         </div>
-        <div id="mobilewarning">
-            <p>This app has not been optimised for mobile use yet. While we work on making it mobile-friendly, please use a desktop browser for the best experience.</p>
-        </div>
+        <div id="toast" role="status"></div>
         <script src="app.js"></script>
     </body>
 </html>

@@ -12,6 +12,7 @@ async function get(endpoint) {
   const data = await res.json();
   if (data.error) throw new Error(data.error.message || 'Deezer error');
   cache.set(endpoint, { data, at: Date.now() });
+  if (cache.size > 500) cache.delete(cache.keys().next().value); // keep memory bounded
   return data;
 }
 
@@ -46,4 +47,14 @@ export async function suggestions(artistIds) {
   }));
   const seen = new Set();
   return lists.flat().filter((t) => !seen.has(t.id) && seen.add(t.id));
+}
+
+export async function track(id) {
+  return toTrack(await get(`/track/${encodeURIComponent(id)}`));
+}
+
+// Used by share links: resolves a list of ids back into full tracks, in order
+export async function tracks(ids) {
+  const list = await Promise.all(ids.map((id) => track(id).catch(() => null)));
+  return list.filter(Boolean);
 }

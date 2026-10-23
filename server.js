@@ -28,4 +28,8 @@ app.get('/api/suggestions', route((req) =>
   music.suggestions(String(req.query.artists || '').split(',').filter(Boolean).slice(0, 4))
 ));
 
+const ids = (v) => String(v || '').split(',').filter((x) => /^\d+$/.test(x)).slice(0, 100);
+app.get('/api/track/:id', route((req) => music.track(ids(req.params.id)[0])));
+app.get('/api/tracks', route((req) => music.tracks(ids(req.query.ids))));
+
 app.listen(PORT, () => console.log(`MusicBox running on http://localhost:${PORT}`));
