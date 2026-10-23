@@ -41,9 +41,9 @@ export async function trending() {
 // "More like this": top tracks from artists related to the ones in the playlist
 export async function suggestions(artistIds) {
   const lists = await Promise.all(artistIds.map(async (id) => {
-    const { data: related } = await get(`/artist/${id}/related?limit=2`);
+    const [artist, { data: related }] = await Promise.all([get(`/artist/${id}`), get(`/artist/${id}/related?limit=2`)]);
     const tops = await Promise.all(related.map((a) => get(`/artist/${a.id}/top?limit=3`)));
-    return tops.flatMap((t) => t.data.map(toTrack));
+    return tops.flatMap((t) => t.data.map((x) => ({ ...toTrack(x), why: `Like ${artist.name}` }))); // shown as the "why suggested" hint
   }));
   const seen = new Set();
   return lists.flat().filter((t) => !seen.has(t.id) && seen.add(t.id));

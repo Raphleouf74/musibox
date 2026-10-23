@@ -639,3 +639,108 @@ button {
   opacity: 0.6;
   cursor: wait;
 }
+
+/* ---------- v5: playlists, player, publish ---------- */
+#plBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: -8px;
+  padding: 0 12px;
+}
+#plSelect {
+  height: 36px;
+  max-width: 220px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+.sm {
+  height: 36px;
+  padding: 0 12px;
+}
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.total {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 400;
+}
+.icon:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.toast-action {
+  height: auto;
+  margin-left: 12px;
+  padding: 2px 8px;
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  border-radius: 8px;
+}
+#toast.show {
+  pointer-events: auto;
+}
+#player {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  z-index: 150;
+  margin: 0 auto;
+  width: min(560px, calc(100% - 24px));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  box-shadow: 0 6px 24px rgb(0 0 0 / 25%);
+  animation: in 0.3s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+#player[hidden] {
+  display: none;
+}
+#player img {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  object-fit: cover;
+  background: var(--accent-soft);
+}
+.p-meta {
+  flex: 1;
+  min-width: 0;
+}
+.p-controls {
+  display: flex;
+  gap: 6px;
+}
+#pSeek {
+  width: 110px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  accent-color: var(--accent);
+}
+.has-player #sugSlot {
+  --sticky-bottom: 96px;
+}
+.has-player #toast {
+  bottom: 96px;
+}
+@media (max-width: 600px) {
+  #pSeek {
+    display: none;
+  }
+}

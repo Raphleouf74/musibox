@@ -34,6 +34,13 @@
                 aria-label="Playlist name"
                 maxlength="40"
             >
+            <div id="plBar">
+                <select id="plSelect" aria-label="Choose playlist"></select>
+                <button id="plNew" class="ghost sm" type="button">+ New</button>
+                <button id="plDup" class="ghost sm" type="button">Duplicate</button>
+                <button id="plClear" class="ghost sm" type="button">Clear</button>
+                <button id="plDelete" class="ghost sm" type="button">Delete</button>
+            </div>
             <div id="panels">
                 <section class="panel">
                     <input
@@ -51,13 +58,18 @@
                         <h2>
                             Your playlist
                             <span id="count" class="count">0</span>
+                            <span id="total" class="total"></span>
                         </h2>
-                        <div class="menu-wrap">
-                            <button id="exportBtn" class="ghost" disabled>Export</button>
-                            <div id="exportMenu" hidden>
-                                <button class="menu-item" data-act="share">Share link…</button>
-                                <button class="menu-item" data-act="text">Copy as text</button>
-                                <button class="menu-item" data-act="csv">Download CSV</button>
+                        <div class="head-actions">
+                            <button id="playAllBtn" class="ghost" disabled>▶ Play all</button>
+                            <div class="menu-wrap">
+                                <button id="exportBtn" class="ghost" disabled>Export</button>
+                                <div id="exportMenu" hidden>
+                                    <button class="menu-item" data-act="share">Share link…</button>
+                                    <button class="menu-item" data-act="oifeel">Publish to oifeel.</button>
+                                    <button class="menu-item" data-act="text">Copy as text</button>
+                                    <button class="menu-item" data-act="csv">Download CSV</button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -67,7 +79,10 @@
                         <div id="sugBox">
                             <div class="head">
                                 <h2>Suggested for you</h2>
-                                <button id="newRecsBtn" class="ghost" type="button">New recommendations</button>
+                                <div class="head-actions">
+                                    <button id="addAllBtn" class="ghost" type="button">Add all</button>
+                                    <button id="newRecsBtn" class="ghost" type="button">New recommendations</button>
+                                </div>
                             </div>
                             <ul id="suggestions" class="tracks"></ul>
                         </div>
@@ -101,7 +116,8 @@
                             </select>
                         </label>
                         <label class="check">
-                            <input type="checkbox" id="sharePwOn"> Protect with a password
+                            <input type="checkbox" id="sharePwOn">
+                            Protect with a password
                         </label>
                         <div id="sharePwRow" hidden>
                             <input
@@ -151,6 +167,88 @@
                     <div class="modal-actions">
                         <button type="button" id="unlockCancel" class="ghost">Cancel</button>
                         <button type="submit" class="primary">Open</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <div id="player" hidden>
+            <img id="pCover" alt="">
+            <div class="p-meta">
+                <div id="pTitle" class="title"></div>
+                <div id="pArtist" class="artist"></div>
+            </div>
+            <div class="p-controls">
+                <button
+                    id="pPrev"
+                    class="icon"
+                    aria-label="Previous song"
+                    title="Previous (P)"
+                >⏮</button>
+                <button
+                    id="pPlay"
+                    class="icon"
+                    aria-label="Play or pause"
+                    title="Play / pause (Space)"
+                >▶</button>
+                <button
+                    id="pNext"
+                    class="icon"
+                    aria-label="Next song"
+                    title="Next (N)"
+                >⏭</button>
+            </div>
+            <input
+                id="pSeek"
+                type="range"
+                min="0"
+                max="1"
+                step="0.001"
+                value="0"
+                aria-label="Seek"
+            >
+            <button id="pClose" class="icon" aria-label="Close player">×</button>
+        </div>
+        <div id="pubModal" class="modal" hidden>
+            <div
+                class="modal-card"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="pubTitle"
+            >
+                <h2 id="pubTitle">Publish to oifeel.</h2>
+                <form id="pubLogin" hidden>
+                    <p class="muted">Log in with your oifeel. account.</p>
+                    <input id="pubName" placeholder="Username" autocomplete="username">
+                    <input
+                        id="pubPass"
+                        type="password"
+                        placeholder="Password"
+                        autocomplete="current-password"
+                        style="margin-top: 8px"
+                    >
+                    <p id="pubLoginError" class="form-error" role="alert"></p>
+                    <div class="modal-actions">
+                        <button type="button" id="pubLoginCancel" class="ghost">Cancel</button>
+                        <button type="submit" class="primary">Log in</button>
+                    </div>
+                </form>
+                <form id="pubForm" hidden>
+                    <p class="muted">Signed in as
+                        <b id="pubUser"></b> ·
+                        <a href="#" id="pubLogout">Log out</a>
+                    </p>
+                    <label class="field">
+                        Say something about it (optional)
+                        <input id="pubText" maxlength="200" placeholder="My road trip mix…">
+                    </label>
+                    <label class="check">
+                        <input type="checkbox" id="pubAnon"> Post anonymously
+                    </label>
+                    <p class="muted">A public link to this playlist (that never expires) will be attached to your post.</p>
+                    <p id="pubError" class="form-error" role="alert"></p>
+                    <div class="modal-actions">
+                        <button type="button" id="pubCancel" class="ghost">Cancel</button>
+                        <button type="submit" id="pubSubmit" class="primary">Publish</button>
                     </div>
                 </form>
             </div>
