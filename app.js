@@ -627,7 +627,7 @@ $('addAllBtn').addEventListener('click', () => {
 
 // ---------- Publish to oifeel. ----------
 // Set `api` to your oifeel. server URL (the one that serves /api/auth/login and /api/posts).
-const OIFEEL = { api: '' }; // e.g. 'https://your-oifeel-server.onrender.com'
+const OIFEEL = { api: 'https://moodshare-7dd7.onrender.com' }; // e.g. 'https://your-oifeel-server.onrender.com'
 const getOifeel = () => { try { return JSON.parse(localStorage.getItem('musicbox:oifeel')); } catch { return null; } };
 function showPublishStep(acc) {
   $('pubLogin').hidden = !!acc; $('pubForm').hidden = !acc;
