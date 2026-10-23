@@ -6,7 +6,7 @@ const audio = new Audio();
 let playingId = null;
 
 const $ = (id) => document.getElementById(id);
-const API_BASE = ''; // same origin: the server serves the page and the API
+const API_BASE = 'https://musibox.onrender.com';
 const api = async (path) => {
   try {
     const response = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(45000) }); // free hosts can take a while to wake up
