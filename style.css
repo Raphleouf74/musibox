@@ -413,6 +413,7 @@ button {
   background: var(--surface);
   opacity: 0;
   pointer-events: none;
+  z-index: 9999999999999999;
 }
 @media (max-width: 769px) {
   #mobilewarning {
