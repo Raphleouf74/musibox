@@ -207,3 +207,27 @@ const newRecsBtn = $('newRecsBtn');
 newRecsBtn.addEventListener('click', () => {
   loadSuggestions({ refresh: true });
 });
+
+const themeBtn = $('theme');
+themeBtn.addEventListener('click', () => {
+  document.body.classList.toggle('dark');
+  const isDark = document.body.classList.contains('dark');
+  localStorage.setItem('musicbox:theme', isDark ? 'dark' : 'light');
+});
+
+const savedTheme = localStorage.getItem('musicbox:theme');
+if (savedTheme === 'dark') {
+  document.body.classList.add('dark');
+}
+
+const accountBtn = $('account');
+const accountDiv = $('accountdiv');
+const closeAccountBtn = $('closeAccount');
+
+accountBtn.addEventListener('click', () => {
+  accountDiv.classList.toggle('show');
+});
+
+closeAccountBtn.addEventListener('click', () => {
+  accountDiv.classList.remove('show');
+});

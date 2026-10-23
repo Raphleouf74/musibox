@@ -3,7 +3,7 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>MusicBox</title>
+        <title>Musibox</title>
         <link rel="preconnect" href="https://fonts.googleapis.com">
         <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
         <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
@@ -11,7 +11,8 @@
     </head>
     <body>
         <header class="top">
-            <div class="logo">MusicBox <p style="font-size: 0.8em; margin: 0; color: black;">oifeel.</p></div>
+            <div class="logo">Musibox <p style="font-size: 0.8em; margin: 0; color: black;"></p></div>
+            <div id="buttons"><button id="theme">Night/Day mode</button><button id="account">Account</button></div>
         </header>
         <main class="grid">
             <input
@@ -60,6 +61,14 @@
                 </section>
             </div>
         </main>
+        <div id="accountdiv">
+            <h1>Account</h1>
+            <p>Account management is not available yet.</p>
+            <button id="closeAccount">Close</button>
+        </div>
+        <div id="mobilewarning">
+            <p>This app has not been optimised for mobile use yet. While we work on making it mobile-friendly, please use a desktop browser for the best experience.</p>
+        </div>
         <script src="app.js"></script>
     </body>
 </html>

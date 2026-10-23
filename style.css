@@ -15,10 +15,47 @@ body {
   margin: 0;
   background: rgb(242, 243, 248);
   color: var(--ink);
+  transition: background 0.4s, color 0.4s;
   font:
     400 15px/1.5 Inter,
     system-ui,
     sans-serif;
+  height: 100%;
+  width: 100%;
+}
+body.dark {
+  --bg: #14142b;
+  --surface: #1e1e2f;
+  --ink: #fff;
+  --muted: #6b6d85;
+  --accent: #3b2ff0;
+  --accent-soft: #3b2ff0;
+  --line: #3b2ff0;
+}
+body.dark {
+  background: var(--bg);
+}
+body.dark .panel {
+  background: var(--surface);
+}
+body.dark .track {
+  background: var(--surface);
+}
+body.dark .track:hover {
+  background: var(--accent-soft);
+}
+body.dark .icon {
+  color: var(--surface);
+}
+body.dark input {
+  background: var(--surface);
+  color: var(--ink);
+}
+body.dark #sugBox {
+  background: rgb(30, 30, 47, 0.4);
+}
+body.dark #sugBox.is-sticky {
+  background: rgb(25, 25, 75, 0.4);
 }
 h2 {
   font:
@@ -33,7 +70,17 @@ h2 {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 20px clamp(16px, 4vw, 48px);
+  padding: 20px;
+  position: sticky;
+  top: 10px;
+  width: 450px;
+  left: 10px;
+  border-radius: 15px;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 8%),
+    0 4px 8px rgb(0 0 0 / 8%);
+  z-index: 100;
+  background: var(--surface);
 }
 .logo {
   font:
@@ -55,7 +102,7 @@ h2 {
   border-radius: 15px;
   width: 25%;
   height: 50px;
-  background: rgb(225,225,225);
+  background: rgb(225, 225, 225);
   padding: 4px 8px;
   transition: all 0.2s ease;
 }
@@ -83,7 +130,9 @@ h2 {
   --normal-height: 440px;
   --sticky-height: 215px;
   --sticky-bottom: 24px;
-  height: var(--normal-height); /* never changes, so the page layout never jumps */
+  height: var(
+    --normal-height
+  ); /* never changes, so the page layout never jumps */
   display: flex;
   align-items: flex-end; /* the box grows/shrinks from its bottom edge */
 }
@@ -166,10 +215,15 @@ h2 {
   grid-template-columns: 48px 1fr auto auto;
   align-items: center;
   gap: 12px;
+  height: 64px;
   padding: 8px 12px 8px 8px;
   background: var(--surface);
   border-radius: var(--radius);
   animation: in 0.35s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  transition: all 0.1s ease-in-out;
+}
+.track:hover {
+  background: var(--accent-soft);
 }
 .track img {
   width: 48px;
@@ -177,6 +231,7 @@ h2 {
   border-radius: 10px;
   object-fit: cover;
   background: var(--accent-soft);
+  transition: all 0.5s ease-in-out;
 }
 .meta {
   min-width: 0;
@@ -223,8 +278,8 @@ button {
   color: var(--accent);
   font-size: 16px;
   transition:
-    transform 0.15s,
-    background 0.15s;
+    transform 0.4s,
+    background 0.4s;
 }
 .icon:hover {
   transform: scale(1.1);
@@ -282,5 +337,91 @@ button {
   * {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+.top div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+button {
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  cursor: pointer;
+  border: 0;
+  border-radius: 15px;
+  background: var(--bg);
+  color: var(--ink);
+  padding: 16px;
+  transition: all 0.2s ease;
+  height: 50px;
+}
+
+#accountdiv {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: left;
+  justify-content: left;
+  gap: 2px;
+  padding: 20px;
+  position: fixed;
+  top: 115px;
+  width: 450px;
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  left: 10px;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 15px;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 8%),
+    0 4px 8px rgb(0 0 0 / 8%);
+  z-index: 100;
+  background: var(--surface);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-25px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+#accountdiv.show {
+  height: 70%;
+  transform: translateY(0);
+  opacity: 1;
+
+  pointer-events: auto;
+}
+
+#mobilewarning {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 20px;
+  position: fixed;
+  bottom: 25px;
+  width: 100%;
+  font-family: "Bricolage Grotesque", system-ui, sans-serif;
+  left: 10px;
+  height: 125px;
+  overflow: hidden;
+  border-radius: 15px;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 8%),
+    0 4px 8px rgb(0 0 0 / 8%);
+  z-index: 100;
+  background: rgb(85, 50, 50, 0.8);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  opacity: 1;
+  pointer-events: none;
+  transform: translateY(-25px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+@media (max-width: 769px) {
+  #mobilewarning {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
