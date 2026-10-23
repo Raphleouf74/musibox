@@ -1,7 +1,7 @@
 // Short share links: create and open playlists stored in MongoDB.
 import crypto from 'node:crypto';
 import { promisify } from 'node:util';
-import { playlists } from './db.js';
+import { playlists } from '../db.js';
 import * as music from './deezer.js';
 
 const scrypt = promisify(crypto.scrypt);
