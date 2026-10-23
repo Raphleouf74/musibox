@@ -8,9 +8,22 @@ let playingId = null;
 const $ = (id) => document.getElementById(id);
 const API_BASE = ''; // same origin: the server serves the page and the API
 const api = async (path) => {
-  const response = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(45000) }); // free hosts can take a while to wake up
-  if (!response.ok) throw new Error(`Request failed: ${response.status}`);
-  return response.json();
+  try {
+    const response = await fetch(`${API_BASE}${path}`, { signal: AbortSignal.timeout(45000) }); // free hosts can take a while to wake up
+    if (!response.ok) {
+      const body = await response.text();
+      let details = body.slice(0, 300);
+      try {
+        const payload = JSON.parse(body);
+        details = payload.error || payload.message || details;
+      } catch { /* Keep the response text for non-JSON errors. */ }
+      throw new Error(`Request failed: ${response.status} ${path}${details ? ` — ${details}` : ''}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`[API] GET ${path} failed:`, error);
+    throw error;
+  }
 };
 
 let toastTimer;
