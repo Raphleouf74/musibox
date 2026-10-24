@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Musibox playlist</title>
+  <style>
+    :root { --bg: #fff; --ink: #14142b; --muted: #6b6d85; --accent: #3b2ff0; --soft: #e9e8ff; }
+    @media (prefers-color-scheme: dark) { :root { --bg: #1e1e2f; --ink: #fff; --soft: #2d2a8f; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 14px; background: var(--bg); color: var(--ink); font: 14px/1.4 system-ui, sans-serif; }
+    header { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 10px; }
+    h1 { margin: 0; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .meta, .artist { color: var(--muted); font-size: 12px; }
+    ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+    li { display: grid; grid-template-columns: 40px 1fr 32px; align-items: center; gap: 10px; padding: 6px; border-radius: 12px; background: var(--soft); }
+    img { width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: var(--soft); }
+    .t { min-width: 0; } .t div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--accent); color: #fff; cursor: pointer; }
+    a { color: var(--accent); font-weight: 600; text-decoration: none; }
+    footer { margin-top: 10px; text-align: right; }
+    .msg { padding: 24px; text-align: center; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div id="root"><p class="msg">Loading…</p></div>
+  <script>
+    const API = 'https://musibox.onrender.com'; // keep in sync with API_BASE in app.js
+    const id = location.pathname.split('/').filter(Boolean).pop();
+    const root = document.getElementById('root');
+    const audio = new Audio();
+    const msg = (t) => { root.innerHTML = ''; const p = document.createElement('p'); p.className = 'msg'; p.textContent = t; root.append(p); };
+    const open = () => `/playlist/${encodeURIComponent(id)}`;
+
+    fetch(`${API}/api/playlists/${encodeURIComponent(id)}/open`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(async (r) => ({ ok: r.ok, status: r.status, data: await r.json().catch(() => ({})) }))
+      .then(({ ok, status, data }) => {
+        if (status === 401) return msg('This playlist is private. Open it on Musibox to enter the password.');
+        if (!ok) return msg(status === 404 ? 'This playlist has expired or doesn’t exist.' : 'Couldn’t load this playlist.');
+        const total = Math.max(1, Math.round(data.tracks.reduce((s, t) => s + (t.duration || 0), 0) / 60));
+        root.innerHTML = '';
+        const head = document.createElement('header');
+        const h1 = document.createElement('h1'); h1.textContent = data.name;
+        const meta = document.createElement('span'); meta.className = 'meta'; meta.textContent = `${data.tracks.length} songs · ${total} min`;
+        head.append(h1, meta);
+        const ul = document.createElement('ul');
+        let current = null;
+        for (const t of data.tracks) {
+          const li = document.createElement('li');
+          const img = document.createElement('img'); img.src = t.cover || ''; img.alt = ''; img.loading = 'lazy';
+          const box = document.createElement('div'); box.className = 't';
+          const title = document.createElement('div'); title.textContent = t.title;
+          const artist = document.createElement('div'); artist.className = 'artist'; artist.textContent = t.artist;
+          box.append(title, artist);
+          const btn = document.createElement('button'); btn.textContent = '▶'; btn.setAttribute('aria-label', `Preview ${t.title}`);
+          btn.onclick = () => {
+            if (current === btn) { audio.pause(); btn.textContent = '▶'; current = null; return; }
+            if (current) current.textContent = '▶';
+            audio.src = t.preview; audio.play().then(() => { btn.textContent = '❚❚'; current = btn; }).catch(() => {});
+          };
+          li.append(img, box, btn); ul.append(li);
+        }
+        audio.onended = () => { if (current) current.textContent = '▶'; current = null; };
+        const foot = document.createElement('footer');
+        const a = document.createElement('a'); a.href = open(); a.target = '_blank'; a.rel = 'noopener'; a.textContent = 'Open in Musibox ↗';
+        foot.append(a);
+        root.append(head, ul, foot);
+      })
+      .catch(() => msg('Couldn’t load this playlist.'));
+  </script>
+</body>
+</html>

@@ -3,6 +3,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as music from './services/deezer.js';
 import * as shares from './services/shares.js';
+import * as lastfm from './services/lastfm.js';
+import * as importer from './services/importer.js';
+import * as accounts from './services/accounts.js';
 
 const app = express();
 app.set('trust proxy', 1); // behind Render's proxy, so req.ip is the visitor
@@ -30,11 +33,12 @@ app.get('/', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/app.js', (_req, res) => res.sendFile(path.join(__dirname, 'app.js')));
 app.get('/style.css', (_req, res) => res.sendFile(path.join(__dirname, 'style.css')));
 app.get('/playlist/:id', (_req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+app.get('/embed/:id', (_req, res) => res.sendFile(path.join(__dirname, 'embed.html')));
 
 app.use('/api', (req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -70,9 +74,23 @@ app.get('/api/health', async (_req, res) => {
 
 app.get('/api/search', route((req) => music.search(String(req.query.q || '').trim())));
 app.get('/api/trending', route(() => music.trending()));
-app.get('/api/suggestions', route((req) =>
-  music.suggestions(String(req.query.artists || '').split(',').filter(Boolean).slice(0, 4))
-));
+app.get('/api/suggestions', route(async (req) => {
+  const artists = String(req.query.artists || '').split(',').filter(Boolean).slice(0, 4);
+  const trackIds = ids(req.query.tracks).slice(-3);
+  const mood = Object.hasOwn(lastfm.TAGS, String(req.query.mood)) ? String(req.query.mood) : '';
+  if (lastfm.enabled() && (mood || trackIds.length)) {
+    try {
+      const list = await lastfm.suggest({ trackIds, mood });
+      if (list.length >= 3) return list;
+    } catch (err) { console.error('[Last.fm]', err.message); } // fall back to the Deezer-based suggestions
+  }
+  return music.suggestions(artists);
+}));
+
+// What this server can do, so the app can show or hide features
+app.get('/api/capabilities', (_req, res) => res.json({
+  lastfm: lastfm.enabled(), moods: Object.keys(lastfm.TAGS), oifeel: (process.env.OIFEEL_API || '').replace(/\/$/, '')
+}));
 
 const ids = (v) => String(v || '').split(',').filter((x) => /^\d+$/.test(x)).slice(0, 100);
 app.get('/api/track/:id', route((req) => music.track(ids(req.params.id)[0])));
@@ -88,6 +106,7 @@ const limited = (key, max, windowMs) => {
 };
 setInterval(() => { const now = Date.now(); for (const [k, h] of hits) if (h.reset < now) hits.delete(k); }, 60000).unref();
 
+app.use('/api/me', express.json({ limit: '1mb' })); // synced playlists are bigger than the 20kb default
 app.use('/api', express.json({ limit: '20kb' }));
 app.post('/api/playlists', route((req) => {
   if (limited(`create:${req.ip}`, 20, 60 * 60e3)) throw shares.fail(429, 'Too many links created. Try again in a while.');
@@ -97,6 +116,15 @@ app.post('/api/playlists/:id/open', route((req) => {
   const password = typeof req.body?.password === 'string' ? req.body.password.slice(0, 64) : '';
   if (password && limited(`pw:${req.ip}:${req.params.id}`, 10, 15 * 60e3)) throw shares.fail(429, 'Too many attempts. Try again in a few minutes.');
   return shares.openShare(req.params.id, password);
+}));
+app.post('/api/import', route((req) => {
+  if (limited(`import:${req.ip}`, 15, 60 * 60e3)) throw shares.fail(429, 'Too many imports. Try again in a while.');
+  return importer.importLines(req.body?.lines);
+}));
+app.get('/api/me/playlists', route((req) => accounts.getLists(req)));
+app.put('/api/me/playlists', route((req) => {
+  if (limited(`sync:${req.ip}`, 200, 60 * 60e3)) throw shares.fail(429, 'Syncing too often. Try again in a while.');
+  return accounts.putLists(req);
 }));
 
 app.use('/api', (req, res) => {
@@ -112,7 +140,10 @@ app.use('/api', (req, res) => {
       'GET /api/track/:id',
       'GET /api/tracks?ids=id,id',
       'POST /api/playlists',
-      'POST /api/playlists/:id/open'
+      'POST /api/playlists/:id/open',
+      'POST /api/import',
+      'GET /api/capabilities',
+      'GET|PUT /api/me/playlists'
     ]
   });
 });

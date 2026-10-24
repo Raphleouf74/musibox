@@ -58,3 +58,24 @@ export async function tracks(ids) {
   const list = await Promise.all(ids.map((id) => track(id).catch(() => null)));
   return list.filter(Boolean);
 }
+// Runs fn over items with at most `limit` requests in flight (Deezer rate-limits bursts)
+export async function mapLimit(items, limit, fn) {
+  const out = new Array(items.length);
+  let next = 0;
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, async () => {
+    while (next < items.length) { const k = next++; out[k] = await fn(items[k], k); }
+  }));
+  return out;
+}
+
+export async function searchOne(text) {
+  if (!text) return null;
+  const { data } = await get(`/search?q=${encodeURIComponent(text)}&limit=1`);
+  return data[0] ? toTrack(data[0]) : null;
+}
+
+export async function findTrack(artist, title) {
+  const q = `artist:"${artist.replace(/"/g, '')}" track:"${title.replace(/"/g, '')}"`;
+  const { data } = await get(`/search?q=${encodeURIComponent(q)}&limit=1`);
+  return data[0] ? toTrack(data[0]) : null;
+}

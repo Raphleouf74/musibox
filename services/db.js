@@ -7,14 +7,15 @@ async function connect() {
   if (!process.env.MONGODB_URI) throw new Error('MONGODB_URI is not set');
   const client = new MongoClient(process.env.MONGODB_URI, { serverSelectionTimeoutMS: 8000 });
   await client.connect();
-  const col = client.db(process.env.MONGODB_DB || 'musibox').collection('playlists');
+  const db = client.db(process.env.MONGODB_DB || 'musibox');
+  const col = db.collection('playlists');
   // MongoDB deletes a document automatically once its expiresAt date has passed.
   // Documents without expiresAt (the "forever" ones) are never deleted.
   await col.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-  return col;
+  return db;
 }
 
-export function playlists() {
+function getDb() {
   ready ??= connect().catch((err) => {
     ready = null; // try again on the next request
     console.error('[DB] connection failed:', err.message);
@@ -22,3 +23,5 @@ export function playlists() {
   });
   return ready;
 }
+export const playlists = async () => (await getDb()).collection('playlists');
+export const userData = async () => (await getDb()).collection('userdata'); // one document per oifeel. user: their synced playlists

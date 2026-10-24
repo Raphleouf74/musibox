@@ -12,6 +12,9 @@ function loadLists() {
   return { activeId: id, lists: [{ id, name: localStorage.getItem('musicbox:name') || 'My playlist', tracks: old }] };
 }
 const store = loadLists();
+store.tombstones ??= {}; // ids of playlists deleted on purpose, so the deletion can sync to other devices
+const sigOf = (tracks) => tracks.map((t) => t.id).join(',');
+store.lists.forEach((l) => { l._sig = sigOf(l.tracks); });
 const activeList = () => store.lists.find((l) => l.id === store.activeId) || store.lists[0];
 let playlist = activeList().tracks;
 const audio = new Audio();
@@ -144,10 +147,18 @@ function renderPlaylist() {
 function persist() {
   localStorage.setItem('musicbox:lists', JSON.stringify({
     activeId: store.activeId,
+    tombstones: store.tombstones,
     lists: store.lists.map((l) => ({ ...l, tracks: l.tracks.map(slim) }))
   }));
+  scheduleSync();
 }
-function save() { activeList().tracks = playlist; persist(); }
+function save() {
+  const l = activeList();
+  l.tracks = playlist;
+  const sig = sigOf(playlist);
+  if (sig !== l._sig) { l._sig = sig; l.updatedAt = Date.now(); } // only real changes count as "newer" when syncing
+  persist();
+}
 
 function addTrack(t) { addTracks([t]); }
 function addTracks(ts) {
@@ -236,7 +247,7 @@ $('playAllBtn').addEventListener('click', async () => {
 
 // ---------- Keyboard shortcuts: Space play/pause, N next, P previous, / search ----------
 document.addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest('input, select, textarea, button, a')) return;
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest?.('input, select, textarea, button, a')) return;
   if (document.querySelector('.modal:not([hidden])')) return;
   if (e.key === ' ') { e.preventDefault(); if (nowPlaying) togglePreview(nowPlaying); else if (playlist.length) playIndex(0, 1); }
   else if (e.key === 'n' || e.key === 'ArrowRight') step(1);
@@ -268,13 +279,29 @@ plUl.addEventListener('dragover', (e) => {
     .find((li) => { const r = li.getBoundingClientRect(); return e.clientY < r.top + r.height / 2; });
   plUl.insertBefore(dragEl, after || null);
 });
-plUl.addEventListener('dragend', () => {
+function commitOrder() {
   if (!dragEl) return;
   dragEl.classList.remove('dragging'); dragEl = null;
   const byId = new Map(playlist.map((t) => [t.id, t]));
   playlist = [...plUl.children].map((li) => byId.get(li.dataset.id)).filter(Boolean);
   save();
+}
+plUl.addEventListener('dragend', commitOrder);
+
+// Touch / pen: press and drag a song's cover (mouse uses the native drag above)
+const moveDragged = (y) => {
+  const after = [...plUl.children].filter((li) => li !== dragEl).find((li) => { const r = li.getBoundingClientRect(); return y < r.top + r.height / 2; });
+  plUl.insertBefore(dragEl, after || null);
+};
+plUl.addEventListener('pointerdown', (e) => {
+  if (e.pointerType === 'mouse' || !e.target.matches('img')) return;
+  dragEl = e.target.closest('li.track');
+  if (!dragEl) return;
+  dragEl.classList.add('dragging');
+  e.target.setPointerCapture(e.pointerId);
 });
+plUl.addEventListener('pointermove', (e) => { if (dragEl && e.pointerType !== 'mouse') moveDragged(e.clientY); });
+['pointerup', 'pointercancel'].forEach((ev) => plUl.addEventListener(ev, (e) => { if (e.pointerType !== 'mouse') commitOrder(); }));
 
 // ---------- Results & suggestions ----------
 let currentResults = [];
@@ -382,7 +409,8 @@ async function loadSuggestions({ refresh = false } = {}) {
   const inList = new Set(playlist.map((t) => t.id));
   const previousSuggestionIds = new Set(currentSuggestions.map((t) => t.id));
   try {
-    const sug = await api('/api/suggestions?artists=' + artists.join(','));
+    const seeds = playlist.slice(-3).map((t) => t.id).join(',');
+    const sug = await api(`/api/suggestions?artists=${artists.join(',')}&tracks=${seeds}&mood=${encodeURIComponent(currentMood)}`);
     if (seq !== sugSeq) return;
     const eligible = sug.filter((t) => !inList.has(t.id));
     let unseen = eligible.filter((t) => !shownSuggestionIds.has(t.id));
@@ -449,7 +477,7 @@ menu.addEventListener('click', (e) => {
 // ---------- Modals ----------
 function showModal(el) {
   el.hidden = false;
-  const f = el.querySelector('select, input:not([type=checkbox])');
+  const f = el.querySelector('select, input:not([type=checkbox]), textarea');
   if (f) setTimeout(() => f.focus(), 50);
 }
 const hideModal = (el) => { el.hidden = true; };
@@ -473,6 +501,7 @@ $('sharePwOn').addEventListener('change', (e) => {
 $('shareCancel').addEventListener('click', () => hideModal($('shareModal')));
 $('shareDone').addEventListener('click', () => hideModal($('shareModal')));
 $('shareCopy').addEventListener('click', () => copy($('shareLink').value, 'Link copied'));
+$('shareEmbedCopy').addEventListener('click', () => copy($('shareEmbed').value, 'Embed code copied'));
 
 $('shareForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -488,6 +517,8 @@ $('shareForm').addEventListener('submit', async (e) => {
     if (usePw) body.password = pw;
     const res = await apiPost('/api/playlists', body);
     $('shareLink').value = `${location.origin}/playlist/${res.id}`;
+    $('shareEmbedRow').hidden = !!res.protected; // protected playlists can't be embedded
+    $('shareEmbed').value = `<iframe src="${location.origin}/embed/${res.id}" width="100%" height="420" style="border:0;border-radius:16px" loading="lazy"></iframe>`;
     $('shareInfo').textContent =
       (res.expiresAt ? `This link expires on ${new Date(res.expiresAt).toLocaleString()}.` : 'This link never expires.') +
       (res.protected ? ' It is protected by your password.' : '');
@@ -561,7 +592,7 @@ async function loadShared() {
 
 // ---------- Playlist name ----------
 $('plName').value = activeList().name;
-$('plName').addEventListener('input', (e) => { activeList().name = e.target.value.slice(0, 40); persist(); renderLists(); });
+$('plName').addEventListener('input', (e) => { activeList().name = e.target.value.slice(0, 40); activeList().updatedAt = Date.now(); persist(); renderLists(); });
 
 // ---------- Theme (the saved theme is applied by a small script in <head> to avoid a flash) ----------
 $('theme').addEventListener('click', () => {
@@ -594,7 +625,7 @@ function switchTo(id, saveFirst = true) {
 }
 function createList(name, tracks) {
   save();
-  store.lists.push({ id: uid(), name: (name || 'New playlist').slice(0, 40), tracks });
+  store.lists.push({ id: uid(), name: (name || 'New playlist').slice(0, 40), tracks, updatedAt: Date.now(), _sig: sigOf(tracks) });
   switchTo(store.lists[store.lists.length - 1].id, false);
 }
 $('plSelect').addEventListener('change', (e) => switchTo(e.target.value));
@@ -612,7 +643,8 @@ $('plClear').addEventListener('click', () => {
 $('plDelete').addEventListener('click', () => {
   if (!confirm(`Delete “${plTitle()}”? This can’t be undone.`)) return;
   const i = store.lists.findIndex((l) => l.id === store.activeId);
-  store.lists.splice(i, 1);
+  const [gone] = store.lists.splice(i, 1);
+  store.tombstones[gone.id] = Date.now();
   if (!store.lists.length) store.lists.push({ id: uid(), name: 'My playlist', tracks: [] });
   switchTo(store.lists[Math.min(i, store.lists.length - 1)].id, false);
 });
@@ -626,36 +658,23 @@ $('addAllBtn').addEventListener('click', () => {
 });
 
 // ---------- Publish to oifeel. ----------
-// Set `api` to your oifeel. server URL (the one that serves /api/auth/login and /api/posts).
-const OIFEEL = { api: 'https://moodshare-7dd7.onrender.com' }; // e.g. 'https://your-oifeel-server.onrender.com'
+const OIFEEL = { api: '' }; // filled in from the server's OIFEEL_API setting (see /api/capabilities)
 const getOifeel = () => { try { return JSON.parse(localStorage.getItem('musicbox:oifeel')); } catch { return null; } };
 function showPublishStep(acc) {
   $('pubLogin').hidden = !!acc; $('pubForm').hidden = !acc;
   if (acc) $('pubUser').textContent = acc.name;
 }
 function openPublishModal() {
-  if (!OIFEEL.api) return toast('Publishing isn’t set up yet: add your oifeel. server URL in app.js');
+  if (!OIFEEL.api) return toast('Publishing isn’t set up on this server yet');
   $('pubError').textContent = ''; $('pubLoginError').textContent = '';
   showPublishStep(getOifeel());
   showModal($('pubModal'));
 }
 $('pubCancel').addEventListener('click', () => hideModal($('pubModal')));
 $('pubLoginCancel').addEventListener('click', () => hideModal($('pubModal')));
-$('pubLogout').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('musicbox:oifeel'); showPublishStep(null); });
+$('pubLogout').addEventListener('click', (e) => { e.preventDefault(); clearSession(); showPublishStep(null); });
 
-$('pubLogin').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const err = $('pubLoginError'); err.textContent = '';
-  try {
-    const data = await apiPost('/api/auth/login', { displayName: $('pubName').value.trim(), password: $('pubPass').value }, { base: OIFEEL.api });
-    if (data.requires2FA) throw Object.assign(new Error('2fa'), { userMessage: 'This account uses two-step verification, which isn’t supported here yet.' });
-    localStorage.setItem('musicbox:oifeel', JSON.stringify({ token: data.token, name: data.user.displayName }));
-    $('pubPass').value = '';
-    showPublishStep(getOifeel());
-  } catch (error) {
-    err.textContent = error.userMessage || (error.status ? error.message : 'Couldn’t reach oifeel. Please try again.');
-  }
-});
+$('pubGoLogin').addEventListener('click', () => { hideModal($('pubModal')); $('accountdiv').classList.add('show'); });
 
 $('pubForm').addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -678,7 +697,7 @@ $('pubForm').addEventListener('submit', async (e) => {
     toast('Published to oifeel. 🎉');
   } catch (error) {
     if (error.status === 401) {
-      localStorage.removeItem('musicbox:oifeel'); showPublishStep(null);
+      clearSession(); showPublishStep(null);
       $('pubLoginError').textContent = 'Your session expired. Please log in again.';
     } else {
       err.textContent = error.status ? error.message : 'Couldn’t reach the server. Please try again.';
@@ -688,6 +707,157 @@ $('pubForm').addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- Mood & genre chips (needs Last.fm on the server) ----------
+let caps = { lastfm: false, moods: [] };
+let currentMood = '';
+function renderMoods() {
+  const box = $('moods');
+  box.hidden = !caps.lastfm;
+  box.replaceChildren(...['', ...caps.moods].map((m) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (m === currentMood ? ' on' : '');
+    b.textContent = m ? m[0].toUpperCase() + m.slice(1) : 'All';
+    b.onclick = () => { currentMood = m; renderMoods(); loadSuggestions({ refresh: true }); };
+    return b;
+  }));
+}
+
+// ---------- Import a pasted song list ----------
+$('plImport').addEventListener('click', () => { $('importResult').textContent = ''; showModal($('importModal')); });
+$('importCancel').addEventListener('click', () => hideModal($('importModal')));
+$('importForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const lines = $('importText').value.split('\n').map((l) => l.trim()).filter(Boolean);
+  const out = $('importResult'); out.textContent = '';
+  if (!lines.length) return;
+  if (lines.length > 50) { out.textContent = 'Please import 50 songs or fewer at a time.'; return; }
+  const btn = $('importSubmit'); btn.disabled = true; btn.textContent = 'Searching…';
+  try {
+    const { tracks, missing } = await apiPost('/api/import', { lines });
+    addTracks(tracks);
+    if (missing.length) {
+      $('importText').value = missing.join('\n'); // leave the unmatched lines so they can be fixed
+      out.textContent = `Added ${tracks.length}. Couldn’t find ${missing.length}; they’re left above so you can fix them.`;
+    } else {
+      $('importText').value = ''; hideModal($('importModal')); toast(`Added ${tracks.length} songs`);
+    }
+  } catch (error) {
+    out.textContent = error.status ? error.message : 'Couldn’t reach the server. Please try again.';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Find songs';
+  }
+});
+
+// ---------- Account (oifeel. login) and cloud sync ----------
+function clearSession() { localStorage.removeItem('musicbox:oifeel'); renderAccount(); }
+function renderAccount() {
+  const a = getOifeel();
+  $('acctOut').hidden = !!a; $('acctIn').hidden = !a;
+  $('acctNotice').hidden = !!OIFEEL.api; $('acctLogin').hidden = !OIFEEL.api;
+  if (a) $('acctUser').textContent = a.name; else $('acct2fa').hidden = true;
+}
+const loginMsg = (error) => error.status ? error.message : 'Couldn’t reach oifeel. Please try again.';
+function finishLogin(data) {
+  localStorage.setItem('musicbox:oifeel', JSON.stringify({ token: data.token, name: data.user.displayName }));
+  $('acctPass').value = ''; $('acctCode').value = '';
+  renderAccount(); toast(`Signed in as ${data.user.displayName}`); syncNow();
+}
+let pending2fa = null;
+$('acctLogin').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('acctError'); err.textContent = '';
+  try {
+    const data = await apiPost('/api/auth/login', { displayName: $('acctName').value.trim(), password: $('acctPass').value }, { base: OIFEEL.api });
+    if (data.requires2FA) {
+      pending2fa = data.pendingToken;
+      $('acct2faHint').textContent = data.method === 'email' ? 'We emailed you a verification code.' : 'Enter the code from your authenticator app.';
+      $('acctLogin').hidden = true; $('acct2fa').hidden = false; $('acctCode').focus();
+      return;
+    }
+    finishLogin(data);
+  } catch (error) { err.textContent = loginMsg(error); }
+});
+$('acct2fa').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('acct2faError'); err.textContent = '';
+  try {
+    finishLogin(await apiPost('/api/auth/login/2fa/verify', { pendingToken: pending2fa, code: $('acctCode').value.trim() }, { base: OIFEEL.api }));
+  } catch (error) { err.textContent = loginMsg(error); }
+});
+$('acctLogout').addEventListener('click', () => { clearSession(); $('acctLogin').hidden = !OIFEEL.api; toast('Logged out. Your playlists stay on this device.'); });
+$('acctSyncBtn').addEventListener('click', () => syncNow());
+
+async function apiAuth(method, path, body) {
+  const response = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getOifeel().token}` },
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(45000)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw Object.assign(new Error(data.error || `Request failed (${response.status})`), { status: response.status });
+  return data;
+}
+
+// Merge by playlist id: the most recently changed copy wins; deletions travel as tombstones
+function mergeLists(local, remote, tombstones) {
+  const byId = new Map();
+  local.filter((l) => !(l.tracks.length === 0 && l.name === 'My playlist' && remote.length && !remote.some((r) => r.id === l.id)))
+    .forEach((l) => byId.set(l.id, l)); // a brand-new empty default playlist shouldn't pile up next to your cloud ones
+  for (const r of remote) {
+    const l = byId.get(r.id);
+    if (!l || (r.updatedAt || 0) > (l.updatedAt || 0)) byId.set(r.id, { ...r, _sig: sigOf(r.tracks) });
+  }
+  for (const [id, ts] of Object.entries(tombstones)) {
+    const l = byId.get(id);
+    if (l && (l.updatedAt || 0) <= ts) byId.delete(id);
+  }
+  return [...byId.values()];
+}
+
+let syncTimer, syncing = false;
+const setSyncText = (t) => { $('acctSync').textContent = t; };
+function scheduleSync() {
+  if (syncing || !getOifeel()) return;
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(syncNow, 3000); // wait for a pause in editing
+}
+async function syncNow() {
+  if (!getOifeel() || syncing) return;
+  syncing = true; setSyncText('Syncing…');
+  try {
+    save(); // include the list being edited
+    const cloud = await apiAuth('GET', '/api/me/playlists');
+    store.tombstones = { ...cloud.tombstones, ...store.tombstones };
+    let merged = mergeLists(store.lists, cloud.lists, store.tombstones);
+    if (!merged.length) merged = [{ id: uid(), name: 'My playlist', tracks: [], updatedAt: Date.now() }];
+    const before = JSON.stringify(store.lists.map((l) => [l.id, l.updatedAt]));
+    store.lists = merged;
+    if (!store.lists.some((l) => l.id === store.activeId)) store.activeId = store.lists[0].id;
+    const changed = before !== JSON.stringify(store.lists.map((l) => [l.id, l.updatedAt]));
+    playlist = activeList().tracks;
+    $('plName').value = activeList().name;
+    localStorage.setItem('musicbox:lists', JSON.stringify({ activeId: store.activeId, tombstones: store.tombstones, lists: store.lists.map((l) => ({ ...l, tracks: l.tracks.map(slim) })) }));
+    if (changed) { renderPlaylist(); renderResults(); loadSuggestions(); }
+    await apiAuth('PUT', '/api/me/playlists', {
+      lists: store.lists.map(({ id, name, tracks, updatedAt }) => ({ id, name, updatedAt: updatedAt || 0, tracks: tracks.map(slim) })),
+      tombstones: store.tombstones
+    });
+    setSyncText(`Synced at ${new Date().toLocaleTimeString()}`);
+  } catch (e) {
+    if (e.status === 401) { clearSession(); toast('Your session expired. Please log in again.'); }
+    else setSyncText('Couldn’t sync. We’ll try again on your next change.');
+  } finally { syncing = false; }
+}
+
+// Ask the server what it supports (Last.fm, oifeel. accounts), then switch those features on
+async function initCapabilities() {
+  try { caps = { ...caps, ...(await api('/api/capabilities')) }; } catch { /* keep the defaults */ }
+  if (!OIFEEL.api) OIFEEL.api = caps.oifeel || '';
+  renderMoods(); renderAccount(); syncNow();
+}
+
 // ---------- Start ----------
 $('newRecsBtn').addEventListener('click', () => loadSuggestions({ refresh: true }));
-renderPlaylist(); showTrending(); loadSuggestions(); loadShared(); openSharedFromPath();
+renderPlaylist(); showTrending(); loadSuggestions(); loadShared(); openSharedFromPath(); initCapabilities();

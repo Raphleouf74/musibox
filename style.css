@@ -744,3 +744,66 @@ button {
     display: none;
   }
 }
+
+/* ---------- v6: chips, import, account, touch drag ---------- */
+.chips {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding: 2px 0 10px;
+}
+.chips[hidden] {
+  display: none;
+}
+.chip {
+  flex: none;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 13px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  white-space: nowrap;
+}
+.chip.on {
+  background: var(--accent);
+  color: #fff;
+}
+.dark .chip {
+  color: #fff;
+}
+.modal textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.modal textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+#accountdiv > div,
+#accountdiv form {
+  width: 100%;
+}
+#accountdiv input {
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 12px 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+}
+#accountdiv .head-actions {
+  margin-bottom: 12px;
+}
+#playlist .track img {
+  touch-action: none;
+  cursor: grab;
+}

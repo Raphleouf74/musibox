@@ -40,6 +40,7 @@
                 <button id="plDup" class="ghost sm" type="button">Duplicate</button>
                 <button id="plClear" class="ghost sm" type="button">Clear</button>
                 <button id="plDelete" class="ghost sm" type="button">Delete</button>
+                <button id="plImport" class="ghost sm" type="button">Import…</button>
             </div>
             <div id="panels">
                 <section class="panel">
@@ -63,14 +64,14 @@
                         <div class="head-actions">
                             <button id="playAllBtn" class="ghost" disabled>▶ Play all</button>
                             <div class="menu-wrap">
-                                <button id="exportBtn" class="ghost" disabled>Export</button>
-                                <div id="exportMenu" hidden>
-                                    <button class="menu-item" data-act="share">Share link…</button>
-                                    <button class="menu-item" data-act="oifeel">Publish to oifeel.</button>
-                                    <button class="menu-item" data-act="text">Copy as text</button>
-                                    <button class="menu-item" data-act="csv">Download CSV</button>
-                                </div>
+                            <button id="exportBtn" class="ghost" disabled>Export</button>
+                            <div id="exportMenu" hidden>
+                                <button class="menu-item" data-act="share">Share link…</button>
+                                <button class="menu-item" data-act="oifeel">Publish to oifeel.</button>
+                                <button class="menu-item" data-act="text">Copy as text</button>
+                                <button class="menu-item" data-act="csv">Download CSV</button>
                             </div>
+                        </div>
                         </div>
                     </div>
                     <ul id="playlist" class="tracks"></ul>
@@ -84,6 +85,7 @@
                                     <button id="newRecsBtn" class="ghost" type="button">New recommendations</button>
                                 </div>
                             </div>
+                            <div id="moods" class="chips" hidden></div>
                             <ul id="suggestions" class="tracks"></ul>
                         </div>
                     </div>
@@ -92,7 +94,30 @@
         </main>
         <div id="accountdiv">
             <h1>Account</h1>
-            <p>Account management is not available yet.</p>
+            <div id="acctOut">
+                <p id="acctNotice" class="muted" hidden>Accounts aren’t set up on this server yet.</p>
+                <form id="acctLogin">
+                    <p class="muted">Log in with your oifeel. account to keep your playlists in the cloud and use them on any device.</p>
+                    <input id="acctName" placeholder="Username" autocomplete="username">
+                    <input id="acctPass" type="password" placeholder="Password" autocomplete="current-password">
+                    <p id="acctError" class="form-error" role="alert"></p>
+                    <button type="submit" class="primary">Log in</button>
+                </form>
+                <form id="acct2fa" hidden>
+                    <p id="acct2faHint" class="muted"></p>
+                    <input id="acctCode" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
+                    <p id="acct2faError" class="form-error" role="alert"></p>
+                    <button type="submit" class="primary">Verify</button>
+                </form>
+            </div>
+            <div id="acctIn" hidden>
+                <p>Signed in as <b id="acctUser"></b></p>
+                <p id="acctSync" class="muted"></p>
+                <div class="head-actions">
+                    <button id="acctSyncBtn" class="ghost" type="button">Sync now</button>
+                    <button id="acctLogout" class="ghost" type="button">Log out</button>
+                </div>
+            </div>
             <button id="closeAccount">Close</button>
         </div>
         <div id="shareModal" class="modal" hidden>
@@ -116,8 +141,7 @@
                             </select>
                         </label>
                         <label class="check">
-                            <input type="checkbox" id="sharePwOn">
-                            Protect with a password
+                            <input type="checkbox" id="sharePwOn"> Protect with a password
                         </label>
                         <div id="sharePwRow" hidden>
                             <input
@@ -139,6 +163,10 @@
                     <div class="link-row">
                         <input id="shareLink" readonly aria-label="Share link">
                         <button id="shareCopy" class="primary" type="button">Copy</button>
+                    </div>
+                    <div id="shareEmbedRow" class="link-row" style="margin-top: 8px" hidden>
+                        <input id="shareEmbed" readonly aria-label="Embed code">
+                        <button id="shareEmbedCopy" class="primary" type="button">Copy embed</button>
                     </div>
                     <p id="shareInfo" class="muted"></p>
                     <div class="modal-actions">
@@ -178,72 +206,44 @@
                 <div id="pArtist" class="artist"></div>
             </div>
             <div class="p-controls">
-                <button
-                    id="pPrev"
-                    class="icon"
-                    aria-label="Previous song"
-                    title="Previous (P)"
-                >⏮</button>
-                <button
-                    id="pPlay"
-                    class="icon"
-                    aria-label="Play or pause"
-                    title="Play / pause (Space)"
-                >▶</button>
-                <button
-                    id="pNext"
-                    class="icon"
-                    aria-label="Next song"
-                    title="Next (N)"
-                >⏭</button>
+                <button id="pPrev" class="icon" aria-label="Previous song" title="Previous (P)">⏮</button>
+                <button id="pPlay" class="icon" aria-label="Play or pause" title="Play / pause (Space)">▶</button>
+                <button id="pNext" class="icon" aria-label="Next song" title="Next (N)">⏭</button>
             </div>
-            <input
-                id="pSeek"
-                type="range"
-                min="0"
-                max="1"
-                step="0.001"
-                value="0"
-                aria-label="Seek"
-            >
+            <input id="pSeek" type="range" min="0" max="1" step="0.001" value="0" aria-label="Seek">
             <button id="pClose" class="icon" aria-label="Close player">×</button>
         </div>
+        <div id="importModal" class="modal" hidden>
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="importTitle">
+                <h2 id="importTitle">Import songs</h2>
+                <form id="importForm">
+                    <p class="muted">Paste one song per line, like “Title – Artist”. Numbers in front are fine.</p>
+                    <textarea id="importText" rows="8" placeholder="Get Lucky – Daft Punk&#10;2. Blinding Lights – The Weeknd"></textarea>
+                    <p id="importResult" class="form-error" role="alert"></p>
+                    <div class="modal-actions">
+                        <button type="button" id="importCancel" class="ghost">Close</button>
+                        <button type="submit" id="importSubmit" class="primary">Find songs</button>
+                    </div>
+                </form>
+            </div>
+        </div>
         <div id="pubModal" class="modal" hidden>
-            <div
-                class="modal-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="pubTitle"
-            >
+            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pubTitle">
                 <h2 id="pubTitle">Publish to oifeel.</h2>
-                <form id="pubLogin" hidden>
-                    <p class="muted">Log in with your oifeel. account.</p>
-                    <input id="pubName" placeholder="Username" autocomplete="username">
-                    <input
-                        id="pubPass"
-                        type="password"
-                        placeholder="Password"
-                        autocomplete="current-password"
-                        style="margin-top: 8px"
-                    >
+                <div id="pubLogin" hidden>
+                    <p class="muted">You need to log in with your oifeel. account first.</p>
                     <p id="pubLoginError" class="form-error" role="alert"></p>
                     <div class="modal-actions">
                         <button type="button" id="pubLoginCancel" class="ghost">Cancel</button>
-                        <button type="submit" class="primary">Log in</button>
+                        <button type="button" id="pubGoLogin" class="primary">Log in</button>
                     </div>
-                </form>
+                </div>
                 <form id="pubForm" hidden>
-                    <p class="muted">Signed in as
-                        <b id="pubUser"></b> ·
-                        <a href="#" id="pubLogout">Log out</a>
-                    </p>
-                    <label class="field">
-                        Say something about it (optional)
+                    <p class="muted">Signed in as <b id="pubUser"></b> · <a href="#" id="pubLogout">Log out</a></p>
+                    <label class="field">Say something about it (optional)
                         <input id="pubText" maxlength="200" placeholder="My road trip mix…">
                     </label>
-                    <label class="check">
-                        <input type="checkbox" id="pubAnon"> Post anonymously
-                    </label>
+                    <label class="check"><input type="checkbox" id="pubAnon"> Post anonymously</label>
                     <p class="muted">A public link to this playlist (that never expires) will be attached to your post.</p>
                     <p id="pubError" class="form-error" role="alert"></p>
                     <div class="modal-actions">
