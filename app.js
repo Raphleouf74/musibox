@@ -683,7 +683,7 @@ $('pubForm').addEventListener('submit', async (e) => {
   try {
     // 1) a public, never-expiring Musibox link  2) a post on oifeel. that points to it
     const share = await apiPost('/api/playlists', { name: plTitle(), trackIds: playlist.map((t) => t.id), expiresIn: 'never' });
-    await apiPost('/api/posts', {
+    const post = await apiPost('/api/posts', {
       text: $('pubText').value.trim() || `🎧 ${plTitle()}`,
       emoji: '🎧', color: '#3b2ff0', textColor: '#ffffff',
       anonymous: $('pubAnon').checked,
@@ -694,7 +694,7 @@ $('pubForm').addEventListener('submit', async (e) => {
     }, { base: OIFEEL.api, headers: { Authorization: `Bearer ${acc.token}` } });
     hideModal($('pubModal'));
     $('pubText').value = '';
-    toast('Published to oifeel. 🎉');
+    toast('Published to oifeel. 🎉', 'View post', () => window.open(`${OIFEEL.api}/p/${encodeURIComponent(post.id)}`, '_blank', 'noopener'));
   } catch (error) {
     if (error.status === 401) {
       clearSession(); showPublishStep(null);
