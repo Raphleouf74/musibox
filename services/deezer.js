@@ -79,3 +79,24 @@ export async function findTrack(artist, title) {
   const { data } = await get(`/search?q=${encodeURIComponent(q)}&limit=1`);
   return data[0] ? toTrack(data[0]) : null;
 }
+
+// Best Deezer match for a song described by title + artist (+ length). Used for Spotify imports:
+// tries a strict "artist + track" search first, then a looser one, and prefers the version whose
+// length is closest to the original (so live/remastered copies lose to the real one).
+export async function matchByMeta({ title, artist, durationSec }) {
+  const first = String(artist || '').split(/,|&| feat\.? /i)[0].trim().replace(/"/g, '');
+  const name = String(title || '').replace(/"/g, '').trim();
+  if (!name) return null;
+  const queries = [];
+  if (first) queries.push(`artist:"${first}" track:"${name}"`);
+  queries.push(`${name} ${first}`.trim());
+  for (const q of queries) {
+    const { data } = await get(`/search?q=${encodeURIComponent(q)}&limit=5`);
+    if (!data.length) continue;
+    const best = durationSec
+      ? [...data].sort((a, b) => Math.abs(a.duration - durationSec) - Math.abs(b.duration - durationSec))[0]
+      : data[0];
+    return toTrack(best);
+  }
+  return null;
+}

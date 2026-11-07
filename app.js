@@ -734,19 +734,178 @@ $('importForm').addEventListener('submit', async (e) => {
   if (lines.length > 50) { out.textContent = 'Please import 50 songs or fewer at a time.'; return; }
   const btn = $('importSubmit'); btn.disabled = true; btn.textContent = 'Searching…';
   try {
-    const { tracks, missing } = await apiPost('/api/import', { lines });
-    addTracks(tracks);
-    if (missing.length) {
-      $('importText').value = missing.join('\n'); // leave the unmatched lines so they can be fixed
-      out.textContent = `Added ${tracks.length}. Couldn’t find ${missing.length}; they’re left above so you can fix them.`;
-    } else {
-      $('importText').value = ''; hideModal($('importModal')); toast(`Added ${tracks.length} songs`);
-    }
+    const data = await apiPost('/api/import', { lines });
+    // older servers only send { tracks, missing }
+    const results = data.results || [
+      ...data.tracks.map((track) => ({ line: track.title, track })),
+      ...data.missing.map((line) => ({ line, hint: line }))
+    ];
+    hideModal($('importModal'));
+    openReview(results);
   } catch (error) {
     out.textContent = error.status ? error.message : 'Couldn’t reach the server. Please try again.';
   } finally {
     btn.disabled = false; btn.textContent = 'Find songs';
   }
+});
+
+// ---------- Review step: check, edit or remove songs before they are added ----------
+const REVIEW_REASONS = {
+  spotify_unreadable: 'Couldn’t read this Spotify link. Search for the song instead.',
+  unsupported_link: 'Only Spotify song links and “Title – Artist” lines work for now.',
+  no_match: 'No match found. Edit the search to find it.',
+  error: 'Something went wrong with this line.'
+};
+let reviewItems = [];
+let reviewAudio = null;
+let reviewPlayingId = null;
+
+function stopReviewAudio() {
+  if (reviewAudio) { reviewAudio.pause(); reviewAudio = null; }
+  if (reviewPlayingId !== null) { reviewPlayingId = null; renderReview(); }
+}
+new MutationObserver(() => { if ($('reviewModal').hidden) stopReviewAudio(); })
+  .observe($('reviewModal'), { attributes: true, attributeFilter: ['hidden'] });
+
+function openReview(results) {
+  reviewItems = results.map((r) => ({
+    line: r.line,
+    track: r.track || null,
+    via: r.via || '',
+    reason: r.reason || '',
+    query: r.hint || (r.track ? `${r.track.title} ${r.track.artist}` : r.line),
+    editing: false, busy: false, options: null, focus: false
+  }));
+  renderReview();
+  showModal($('reviewModal'));
+}
+
+const reviewReady = () => reviewItems.filter((it) => it.track && !inPlaylist(it.track));
+
+function renderReview() {
+  $('reviewList').replaceChildren(...reviewItems.map(buildReviewRow));
+  const ready = reviewReady().length;
+  const dups = reviewItems.filter((it) => it.track && inPlaylist(it.track)).length;
+  const missing = reviewItems.filter((it) => !it.track).length;
+  $('reviewSummary').textContent = [
+    `${ready} ready to add`,
+    dups ? `${dups} already in your playlist` : '',
+    missing ? `${missing} not found (skipped unless you fix them with ✎)` : ''
+  ].filter(Boolean).join(' · ');
+  const confirm = $('reviewConfirm');
+  confirm.disabled = ready === 0;
+  confirm.textContent = ready ? `Add ${ready} song${ready === 1 ? '' : 's'}` : 'Nothing to add';
+}
+
+function reviewEl(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+function buildReviewRow(item) {
+  const dup = item.track && inPlaylist(item.track);
+  const li = reviewEl('li', `review-row ${!item.track ? 'is-missing' : dup ? 'is-dup' : 'is-ok'}`);
+  const main = reviewEl('div', 'review-main');
+
+  const cover = reviewEl('img', 'review-cover'); cover.alt = ''; cover.loading = 'lazy';
+  if (item.track && item.track.cover) cover.src = item.track.cover;
+
+  const text = reviewEl('div', 'review-text');
+  text.append(
+    reviewEl('div', 'review-title', item.track ? item.track.title : item.query || item.line),
+    reviewEl('div', 'review-sub', item.track ? item.track.artist : '')
+  );
+  const note = dup ? 'Already in your playlist'
+    : !item.track ? (REVIEW_REASONS[item.reason] || REVIEW_REASONS.no_match)
+    : item.via === 'spotify' ? 'Matched from your Spotify link' : '';
+  if (note) text.append(reviewEl('div', 'review-note', note));
+
+  const actions = reviewEl('div', 'review-actions');
+  if (item.track) {
+    const play = reviewEl('button', 'icon', reviewPlayingId === item.track.id ? '❚❚' : '▶');
+    play.type = 'button'; play.setAttribute('aria-label', `Preview ${item.track.title}`);
+    play.addEventListener('click', () => toggleReviewPreview(item.track));
+    actions.append(play);
+  }
+  const edit = reviewEl('button', 'icon', '✎');
+  edit.type = 'button'; edit.setAttribute('aria-label', 'Change this song');
+  edit.addEventListener('click', () => { item.editing = !item.editing; item.focus = item.editing; renderReview(); });
+  const remove = reviewEl('button', 'icon', '×');
+  remove.type = 'button'; remove.setAttribute('aria-label', 'Remove this song');
+  remove.addEventListener('click', () => { reviewItems = reviewItems.filter((it) => it !== item); renderReview(); });
+  actions.append(edit, remove);
+
+  main.append(cover, text, actions);
+  li.append(main);
+  if (item.editing) li.append(buildReviewEditor(item));
+  return li;
+}
+
+function buildReviewEditor(item) {
+  const box = reviewEl('div', 'review-edit');
+  const row = reviewEl('div', 'review-edit-row');
+  const input = reviewEl('input'); input.value = item.query; input.placeholder = 'Title and artist';
+  input.setAttribute('aria-label', 'Search for a song');
+  input.addEventListener('input', () => { item.query = input.value; });
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); reviewSearch(item); } });
+  const go = reviewEl('button', 'primary', item.busy ? 'Searching…' : 'Search');
+  go.type = 'button'; go.disabled = item.busy;
+  go.addEventListener('click', () => reviewSearch(item));
+  row.append(input, go);
+  box.append(row);
+  if (item.options) {
+    const list = reviewEl('ul', 'review-options');
+    if (!item.options.length) list.append(reviewEl('li', 'muted', 'Nothing found. Try fewer words.'));
+    item.options.forEach((t) => {
+      const li = reviewEl('li');
+      const pick = reviewEl('button', 'review-option'); pick.type = 'button';
+      const img = reviewEl('img'); img.alt = ''; if (t.cover) img.src = t.cover;
+      pick.append(img, reviewEl('span', '', `${t.title} · ${t.artist}`));
+      pick.addEventListener('click', () => { item.track = t; item.via = ''; item.reason = ''; item.editing = false; item.options = null; renderReview(); });
+      li.append(pick); list.append(li);
+    });
+    box.append(list);
+  }
+  if (item.focus) { item.focus = false; setTimeout(() => input.focus(), 0); }
+  return box;
+}
+
+async function reviewSearch(item) {
+  const q = item.query.replace(/\s[-–—]\s/g, ' ').trim();
+  if (!q) return;
+  item.busy = true; item.options = null; item.focus = true; renderReview();
+  try { item.options = (await api('/api/search?q=' + encodeURIComponent(q))).slice(0, 5); }
+  catch { item.options = []; }
+  item.busy = false; renderReview();
+}
+
+async function toggleReviewPreview(track) {
+  if (reviewPlayingId === track.id) return stopReviewAudio();
+  if (reviewAudio) { reviewAudio.pause(); reviewAudio = null; }
+  if (playingId) { audio.pause(); playingId = null; repaint(); } // silence the main player
+  reviewPlayingId = track.id; renderReview();
+  try {
+    const url = track.preview || (await api('/api/track/' + track.id)).preview;
+    if (reviewPlayingId !== track.id) return;
+    reviewAudio = new Audio(url);
+    reviewAudio.addEventListener('ended', stopReviewAudio);
+    await reviewAudio.play();
+  } catch {
+    reviewAudio = null; reviewPlayingId = null; renderReview();
+    toast('No preview available for this song');
+  }
+}
+
+$('reviewBack').addEventListener('click', () => { hideModal($('reviewModal')); showModal($('importModal')); });
+$('reviewConfirm').addEventListener('click', () => {
+  const tracks = reviewReady().map((it) => it.track);
+  if (!tracks.length) return;
+  addTracks(tracks);
+  hideModal($('reviewModal'));
+  $('importText').value = '';
+  toast(`Added ${tracks.length} song${tracks.length === 1 ? '' : 's'}`);
 });
 
 // ---------- Account (oifeel. login) and cloud sync ----------

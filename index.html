@@ -1,260 +1,391 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>Musibox</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com">
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-        <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500&display=swap" rel="stylesheet">
-        <script>
-            try {
-                const t = localStorage.getItem('musicbox:theme');
-                if (t === 'dark' || (!t && matchMedia('(prefers-color-scheme: dark)').matches)) document.documentElement.classList.add('dark');
-            } catch {}
-        </script>
-        <link rel="stylesheet" href="/style.css">
-    </head>
-    <body>
-        <header class="top">
-            <div class="logo">
-                Musibox
-                <p style="font-size: 0.8em; margin: 0; color: black;"></p>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Musibox</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      try {
+        const t = localStorage.getItem("musicbox:theme");
+        if (
+          t === "dark" ||
+          (!t && matchMedia("(prefers-color-scheme: dark)").matches)
+        )
+          document.documentElement.classList.add("dark");
+      } catch {}
+    </script>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="logo">
+        Musibox
+        <p style="font-size: 0.8em; margin: 0; color: black"></p>
+      </div>
+      <div id="buttons">
+        <button id="theme">Night/Day mode</button>
+        <button id="account">Account</button>
+      </div>
+    </header>
+    <main class="grid">
+      <input
+        id="plName"
+        class="pl-name"
+        value="My playlist"
+        aria-label="Playlist name"
+        maxlength="40"
+      />
+      <div id="plBar">
+        <select id="plSelect" aria-label="Choose playlist"></select>
+        <button id="plNew" class="ghost sm" type="button">+ New</button>
+        <button id="plDup" class="ghost sm" type="button">Duplicate</button>
+        <button id="plClear" class="ghost sm" type="button">Clear</button>
+        <button id="plDelete" class="ghost sm" type="button">Delete</button>
+        <button id="plImport" class="ghost sm" type="button">Import…</button>
+      </div>
+      <div id="panels">
+        <section class="panel">
+          <input
+            id="q"
+            class="search"
+            type="search"
+            placeholder="Search songs or artists"
+            autocomplete="off"
+          />
+          <h2 id="findTitle">Trending now</h2>
+          <ul id="results" class="tracks"></ul>
+        </section>
+        <section class="panel">
+          <div class="head">
+            <h2>
+              Your playlist
+              <span id="count" class="count">0</span>
+              <span id="total" class="total"></span>
+            </h2>
+            <div class="head-actions">
+              <button id="playAllBtn" class="ghost" disabled>▶ Play all</button>
+              <div class="menu-wrap">
+                <button id="exportBtn" class="ghost" disabled>Export</button>
+                <div id="exportMenu" hidden>
+                  <button class="menu-item" data-act="share">
+                    Share link…
+                  </button>
+                  <button class="menu-item" data-act="oifeel">
+                    Publish to oifeel.
+                  </button>
+                  <button class="menu-item" data-act="text">
+                    Copy as text
+                  </button>
+                  <button class="menu-item" data-act="csv">Download CSV</button>
+                </div>
+              </div>
             </div>
-            <div id="buttons">
-                <button id="theme">Night/Day mode</button>
-                <button id="account">Account</button>
-            </div>
-        </header>
-        <main class="grid">
-            <input
-                id="plName"
-                class="pl-name"
-                value="My playlist"
-                aria-label="Playlist name"
-                maxlength="40"
-            >
-            <div id="plBar">
-                <select id="plSelect" aria-label="Choose playlist"></select>
-                <button id="plNew" class="ghost sm" type="button">+ New</button>
-                <button id="plDup" class="ghost sm" type="button">Duplicate</button>
-                <button id="plClear" class="ghost sm" type="button">Clear</button>
-                <button id="plDelete" class="ghost sm" type="button">Delete</button>
-                <button id="plImport" class="ghost sm" type="button">Import…</button>
-            </div>
-            <div id="panels">
-                <section class="panel">
-                    <input
-                        id="q"
-                        class="search"
-                        type="search"
-                        placeholder="Search songs or artists"
-                        autocomplete="off"
-                    >
-                    <h2 id="findTitle">Trending now</h2>
-                    <ul id="results" class="tracks"></ul>
-                </section>
-                <section class="panel">
-                    <div class="head">
-                        <h2>
-                            Your playlist
-                            <span id="count" class="count">0</span>
-                            <span id="total" class="total"></span>
-                        </h2>
-                        <div class="head-actions">
-                            <button id="playAllBtn" class="ghost" disabled>▶ Play all</button>
-                            <div class="menu-wrap">
-                            <button id="exportBtn" class="ghost" disabled>Export</button>
-                            <div id="exportMenu" hidden>
-                                <button class="menu-item" data-act="share">Share link…</button>
-                                <button class="menu-item" data-act="oifeel">Publish to oifeel.</button>
-                                <button class="menu-item" data-act="text">Copy as text</button>
-                                <button class="menu-item" data-act="csv">Download CSV</button>
-                            </div>
-                        </div>
-                        </div>
-                    </div>
-                    <ul id="playlist" class="tracks"></ul>
-                    <p id="empty" class="empty">Add a song from the left to start your playlist.</p>
-                    <div id="sugSlot" hidden>
-                        <div id="sugBox">
-                            <div class="head">
-                                <h2>Suggested for you</h2>
-                                <div class="head-actions">
-                                    <button id="addAllBtn" class="ghost" type="button">Add all</button>
-                                    <button id="newRecsBtn" class="ghost" type="button">New recommendations</button>
-                                </div>
-                            </div>
-                            <div id="moods" class="chips" hidden></div>
-                            <ul id="suggestions" class="tracks"></ul>
-                        </div>
-                    </div>
-                </section>
-            </div>
-        </main>
-        <div id="accountdiv">
-            <h1>Account</h1>
-            <div id="acctOut">
-                <p id="acctNotice" class="muted" hidden>Accounts aren’t set up on this server yet.</p>
-                <form id="acctLogin">
-                    <p class="muted">Log in with your oifeel. account to keep your playlists in the cloud and use them on any device.</p>
-                    <input id="acctName" placeholder="Username" autocomplete="username">
-                    <input id="acctPass" type="password" placeholder="Password" autocomplete="current-password">
-                    <p id="acctError" class="form-error" role="alert"></p>
-                    <button type="submit" class="primary">Log in</button>
-                </form>
-                <form id="acct2fa" hidden>
-                    <p id="acct2faHint" class="muted"></p>
-                    <input id="acctCode" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code">
-                    <p id="acct2faError" class="form-error" role="alert"></p>
-                    <button type="submit" class="primary">Verify</button>
-                </form>
-            </div>
-            <div id="acctIn" hidden>
-                <p>Signed in as <b id="acctUser"></b></p>
-                <p id="acctSync" class="muted"></p>
+          </div>
+          <ul id="playlist" class="tracks"></ul>
+          <p id="empty" class="empty">
+            Add a song from the left to start your playlist.
+          </p>
+          <div id="sugSlot" hidden>
+            <div id="sugBox">
+              <div class="head">
+                <h2>Suggested for you</h2>
                 <div class="head-actions">
-                    <button id="acctSyncBtn" class="ghost" type="button">Sync now</button>
-                    <button id="acctLogout" class="ghost" type="button">Log out</button>
+                  <button id="addAllBtn" class="ghost" type="button">
+                    Add all
+                  </button>
+                  <button id="newRecsBtn" class="ghost" type="button">
+                    New recommendations
+                  </button>
                 </div>
+              </div>
+              <div id="moods" class="chips" hidden></div>
+              <ul id="suggestions" class="tracks"></ul>
             </div>
-            <button id="closeAccount">Close</button>
+          </div>
+        </section>
+      </div>
+    </main>
+    <div id="accountdiv">
+      <h1>Account</h1>
+      <div id="acctOut">
+        <p id="acctNotice" class="muted" hidden>
+          Accounts aren’t set up on this server yet.
+        </p>
+        <form id="acctLogin">
+          <p class="muted">
+            Log in with your oifeel. account to keep your playlists in the cloud
+            and use them on any device.
+          </p>
+          <input id="acctName" placeholder="Username" autocomplete="username" />
+          <input
+            id="acctPass"
+            type="password"
+            placeholder="Password"
+            autocomplete="current-password"
+          />
+          <p id="acctError" class="form-error" role="alert"></p>
+          <button type="submit" class="primary">Log in</button>
+        </form>
+        <form id="acct2fa" hidden>
+          <p id="acct2faHint" class="muted"></p>
+          <input
+            id="acctCode"
+            placeholder="6-digit code"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+          />
+          <p id="acct2faError" class="form-error" role="alert"></p>
+          <button type="submit" class="primary">Verify</button>
+        </form>
+      </div>
+      <div id="acctIn" hidden>
+        <p>Signed in as <b id="acctUser"></b></p>
+        <p id="acctSync" class="muted"></p>
+        <div class="head-actions">
+          <button id="acctSyncBtn" class="ghost" type="button">Sync now</button>
+          <button id="acctLogout" class="ghost" type="button">Log out</button>
         </div>
-        <div id="shareModal" class="modal" hidden>
-            <div
-                class="modal-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="shareTitle"
-            >
-                <h2 id="shareTitle">Share this playlist</h2>
-                <div id="shareStep1">
-                    <form id="shareForm">
-                        <label class="field">
-                            How long should the link work?
-                            <select id="shareExpiry">
-                                <option value="1h">1 hour</option>
-                                <option value="1d">1 day</option>
-                                <option value="7d" selected>7 days</option>
-                                <option value="30d">30 days</option>
-                                <option value="never">Forever</option>
-                            </select>
-                        </label>
-                        <label class="check">
-                            <input type="checkbox" id="sharePwOn"> Protect with a password
-                        </label>
-                        <div id="sharePwRow" hidden>
-                            <input
-                                id="sharePw"
-                                type="password"
-                                placeholder="Choose a password (4+ characters)"
-                                maxlength="64"
-                                autocomplete="new-password"
-                            >
-                        </div>
-                        <p id="shareError" class="form-error" role="alert"></p>
-                        <div class="modal-actions">
-                            <button type="button" id="shareCancel" class="ghost">Cancel</button>
-                            <button type="submit" id="shareSubmit" class="primary">Create link</button>
-                        </div>
-                    </form>
-                </div>
-                <div id="shareStep2" hidden>
-                    <div class="link-row">
-                        <input id="shareLink" readonly aria-label="Share link">
-                        <button id="shareCopy" class="primary" type="button">Copy</button>
-                    </div>
-                    <div id="shareEmbedRow" class="link-row" style="margin-top: 8px" hidden>
-                        <input id="shareEmbed" readonly aria-label="Embed code">
-                        <button id="shareEmbedCopy" class="primary" type="button">Copy embed</button>
-                    </div>
-                    <p id="shareInfo" class="muted"></p>
-                    <div class="modal-actions">
-                        <button id="shareDone" class="ghost" type="button">Done</button>
-                    </div>
-                </div>
+      </div>
+      <button id="closeAccount">Close</button>
+    </div>
+    <div id="shareModal" class="modal" hidden>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="shareTitle"
+      >
+        <h2 id="shareTitle">Share this playlist</h2>
+        <div id="shareStep1">
+          <form id="shareForm">
+            <label class="field">
+              How long should the link work?
+              <select id="shareExpiry">
+                <option value="1h">1 hour</option>
+                <option value="1d">1 day</option>
+                <option value="7d" selected>7 days</option>
+                <option value="30d">30 days</option>
+                <option value="never">Forever</option>
+              </select>
+            </label>
+            <label class="check">
+              <input type="checkbox" id="sharePwOn" /> Protect with a password
+            </label>
+            <div id="sharePwRow" hidden>
+              <input
+                id="sharePw"
+                type="password"
+                placeholder="Choose a password (4+ characters)"
+                maxlength="64"
+                autocomplete="new-password"
+              />
             </div>
+            <p id="shareError" class="form-error" role="alert"></p>
+            <div class="modal-actions">
+              <button type="button" id="shareCancel" class="ghost">
+                Cancel
+              </button>
+              <button type="submit" id="shareSubmit" class="primary">
+                Create link
+              </button>
+            </div>
+          </form>
         </div>
-        <div id="unlockModal" class="modal" hidden>
-            <div
-                class="modal-card"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="unlockTitle"
-            >
-                <h2 id="unlockTitle">This playlist is protected</h2>
-                <form id="unlockForm">
-                    <input
-                        id="unlockPw"
-                        type="password"
-                        placeholder="Enter the password"
-                        maxlength="64"
-                        autocomplete="off"
-                    >
-                    <p id="unlockError" class="form-error" role="alert"></p>
-                    <div class="modal-actions">
-                        <button type="button" id="unlockCancel" class="ghost">Cancel</button>
-                        <button type="submit" class="primary">Open</button>
-                    </div>
-                </form>
-            </div>
+        <div id="shareStep2" hidden>
+          <div class="link-row">
+            <input id="shareLink" readonly aria-label="Share link" />
+            <button id="shareCopy" class="primary" type="button">Copy</button>
+          </div>
+          <div
+            id="shareEmbedRow"
+            class="link-row"
+            style="margin-top: 8px"
+            hidden
+          >
+            <input id="shareEmbed" readonly aria-label="Embed code" />
+            <button id="shareEmbedCopy" class="primary" type="button">
+              Copy embed
+            </button>
+          </div>
+          <p id="shareInfo" class="muted"></p>
+          <div class="modal-actions">
+            <button id="shareDone" class="ghost" type="button">Done</button>
+          </div>
         </div>
-        <div id="player" hidden>
-            <img id="pCover" alt="">
-            <div class="p-meta">
-                <div id="pTitle" class="title"></div>
-                <div id="pArtist" class="artist"></div>
-            </div>
-            <div class="p-controls">
-                <button id="pPrev" class="icon" aria-label="Previous song" title="Previous (P)">⏮</button>
-                <button id="pPlay" class="icon" aria-label="Play or pause" title="Play / pause (Space)">▶</button>
-                <button id="pNext" class="icon" aria-label="Next song" title="Next (N)">⏭</button>
-            </div>
-            <input id="pSeek" type="range" min="0" max="1" step="0.001" value="0" aria-label="Seek">
-            <button id="pClose" class="icon" aria-label="Close player">×</button>
+      </div>
+    </div>
+    <div id="unlockModal" class="modal" hidden>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unlockTitle"
+      >
+        <h2 id="unlockTitle">This playlist is protected</h2>
+        <form id="unlockForm">
+          <input
+            id="unlockPw"
+            type="password"
+            placeholder="Enter the password"
+            maxlength="64"
+            autocomplete="off"
+          />
+          <p id="unlockError" class="form-error" role="alert"></p>
+          <div class="modal-actions">
+            <button type="button" id="unlockCancel" class="ghost">
+              Cancel
+            </button>
+            <button type="submit" class="primary">Open</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="player" hidden>
+      <img id="pCover" alt="" />
+      <div class="p-meta">
+        <div id="pTitle" class="title"></div>
+        <div id="pArtist" class="artist"></div>
+      </div>
+      <div class="p-controls">
+        <button
+          id="pPrev"
+          class="icon"
+          aria-label="Previous song"
+          title="Previous (P)"
+        >
+          ⏮
+        </button>
+        <button
+          id="pPlay"
+          class="icon"
+          aria-label="Play or pause"
+          title="Play / pause (Space)"
+        >
+          ▶
+        </button>
+        <button id="pNext" class="icon" aria-label="Next song" title="Next (N)">
+          ⏭
+        </button>
+      </div>
+      <input
+        id="pSeek"
+        type="range"
+        min="0"
+        max="1"
+        step="0.001"
+        value="0"
+        aria-label="Seek"
+      />
+      <button id="pClose" class="icon" aria-label="Close player">×</button>
+    </div>
+    <div id="importModal" class="modal" hidden>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="importTitle"
+      >
+        <h2 id="importTitle">Import songs</h2>
+        <form id="importForm">
+          <p class="muted">
+            Paste one song per line: a
+            <strong>Spotify link</strong> (open.spotify.com/track/…) or text
+            like “Title – Artist”. You can check and edit everything before it’s
+            added.
+          </p>
+          <textarea
+            id="importText"
+            rows="8"
+            placeholder="https://open.spotify.com/track/…&#10;Get Lucky – Daft Punk&#10;2. Blinding Lights – The Weeknd"
+          ></textarea>
+          <p id="importResult" class="form-error" role="alert"></p>
+          <div class="modal-actions">
+            <button type="button" id="importCancel" class="ghost">Close</button>
+            <button type="submit" id="importSubmit" class="primary">
+              Find songs
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div id="reviewModal" class="modal" hidden>
+      <div
+        class="modal-card modal-card--wide"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="reviewTitle"
+      >
+        <h2 id="reviewTitle">Check your songs</h2>
+        <p id="reviewSummary" class="muted"></p>
+        <ul id="reviewList" class="review-list"></ul>
+        <div class="modal-actions">
+          <button type="button" id="reviewBack" class="ghost">Back</button>
+          <button type="button" id="reviewConfirm" class="primary">
+            Add songs
+          </button>
         </div>
-        <div id="importModal" class="modal" hidden>
-            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="importTitle">
-                <h2 id="importTitle">Import songs</h2>
-                <form id="importForm">
-                    <p class="muted">Paste one song per line, like “Title – Artist”. Numbers in front are fine.</p>
-                    <textarea id="importText" rows="8" placeholder="Get Lucky – Daft Punk&#10;2. Blinding Lights – The Weeknd"></textarea>
-                    <p id="importResult" class="form-error" role="alert"></p>
-                    <div class="modal-actions">
-                        <button type="button" id="importCancel" class="ghost">Close</button>
-                        <button type="submit" id="importSubmit" class="primary">Find songs</button>
-                    </div>
-                </form>
-            </div>
+      </div>
+    </div>
+    <div id="pubModal" class="modal" hidden>
+      <div
+        class="modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pubTitle"
+      >
+        <h2 id="pubTitle">Publish to oifeel.</h2>
+        <div id="pubLogin" hidden>
+          <p class="muted">
+            You need to log in with your oifeel. account first.
+          </p>
+          <p id="pubLoginError" class="form-error" role="alert"></p>
+          <div class="modal-actions">
+            <button type="button" id="pubLoginCancel" class="ghost">
+              Cancel
+            </button>
+            <button type="button" id="pubGoLogin" class="primary">
+              Log in
+            </button>
+          </div>
         </div>
-        <div id="pubModal" class="modal" hidden>
-            <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="pubTitle">
-                <h2 id="pubTitle">Publish to oifeel.</h2>
-                <div id="pubLogin" hidden>
-                    <p class="muted">You need to log in with your oifeel. account first.</p>
-                    <p id="pubLoginError" class="form-error" role="alert"></p>
-                    <div class="modal-actions">
-                        <button type="button" id="pubLoginCancel" class="ghost">Cancel</button>
-                        <button type="button" id="pubGoLogin" class="primary">Log in</button>
-                    </div>
-                </div>
-                <form id="pubForm" hidden>
-                    <p class="muted">Signed in as <b id="pubUser"></b> · <a href="#" id="pubLogout">Log out</a></p>
-                    <label class="field">Say something about it (optional)
-                        <input id="pubText" maxlength="200" placeholder="My road trip mix…">
-                    </label>
-                    <label class="check"><input type="checkbox" id="pubAnon"> Post anonymously</label>
-                    <p class="muted">A public link to this playlist (that never expires) will be attached to your post.</p>
-                    <p id="pubError" class="form-error" role="alert"></p>
-                    <div class="modal-actions">
-                        <button type="button" id="pubCancel" class="ghost">Cancel</button>
-                        <button type="submit" id="pubSubmit" class="primary">Publish</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-        
-        <div id="toast" role="status"></div>
-        <script src="/app.js"></script>
-    </body>
+        <form id="pubForm" hidden>
+          <p class="muted">
+            Signed in as <b id="pubUser"></b> ·
+            <a href="#" id="pubLogout">Log out</a>
+          </p>
+          <label class="field"
+            >Say something about it (optional)
+            <input
+              id="pubText"
+              maxlength="200"
+              placeholder="My road trip mix…"
+            />
+          </label>
+          <label class="check"
+            ><input type="checkbox" id="pubAnon" /> Post anonymously</label
+          >
+          <p class="muted">
+            A public link to this playlist (that never expires) will be attached
+            to your post.
+          </p>
+          <p id="pubError" class="form-error" role="alert"></p>
+          <div class="modal-actions">
+            <button type="button" id="pubCancel" class="ghost">Cancel</button>
+            <button type="submit" id="pubSubmit" class="primary">
+              Publish
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div id="toast" role="status"></div>
+    <script src="/app.js"></script>
+  </body>
 </html>
